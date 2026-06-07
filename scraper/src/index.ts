@@ -47,6 +47,9 @@ async function fetchCsrfToken(): Promise<{ csrf: string; cookie: string }> {
   });
 
   if (!response.ok) {
+    const body = await response.text().catch(() => "(unreadable)");
+    console.error("Response headers:", Object.fromEntries(response.headers));
+    console.error("Response body (first 500 chars):", body.slice(0, 500));
     throw new Error(`Failed to fetch gym page: ${response.status}`);
   }
 
