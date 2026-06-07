@@ -1,0 +1,7 @@
+{
+  "name": "sputnik-crowd-tracker",
+  "private": true,
+  "scripts": {
+    "scrape": "pnpm --filter scraper start"
+  }
+}

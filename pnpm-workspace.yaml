@@ -1,0 +1,5 @@
+packages:
+  - scraper
+  - dashboard
+allowBuilds:
+  esbuild: true
