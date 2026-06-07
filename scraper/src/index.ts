@@ -42,7 +42,13 @@ async function fetchCsrfToken(): Promise<{ csrf: string; cookie: string }> {
     throw new Error("CSRF token not found in page");
   }
 
-  const cookie = response.headers.get("set-cookie") ?? "";
+  // getSetCookie() returns all cookies as an array; extract name=value pairs only
+  const cookies = response.headers.getSetCookie?.() ?? [response.headers.get("set-cookie") ?? ""];
+  const cookie = cookies
+    .map((c) => c.split(";")[0])
+    .filter(Boolean)
+    .join("; ");
+
   return { csrf: match[1], cookie };
 }
 
