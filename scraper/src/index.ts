@@ -7,6 +7,20 @@ const OCCUPANCY_API_URL =
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+const BROWSER_HEADERS = {
+  "User-Agent": USER_AGENT,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  "Pragma": "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
+
 interface ApiVenue {
   IdRecinto: number;
   Recinto: string;
@@ -29,7 +43,7 @@ interface Reading {
 
 async function fetchCsrfToken(): Promise<{ csrf: string; cookie: string }> {
   const response = await fetch(GYM_URL, {
-    headers: { "User-Agent": USER_AGENT },
+    headers: BROWSER_HEADERS,
   });
 
   if (!response.ok) {
@@ -56,12 +70,16 @@ async function fetchOccupancy(csrf: string, cookie: string): Promise<ApiVenue[]>
   const response = await fetch(OCCUPANCY_API_URL, {
     method: "POST",
     headers: {
-      "User-Agent": USER_AGENT,
+      ...BROWSER_HEADERS,
       "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "*/*",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
       "X-CSRF-TOKEN": csrf,
       "X-Requested-With": "XMLHttpRequest",
-      Referer: GYM_URL,
-      Cookie: cookie,
+      "Referer": GYM_URL,
+      "Cookie": cookie,
     },
   });
 
