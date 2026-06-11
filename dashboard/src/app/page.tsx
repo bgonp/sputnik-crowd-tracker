@@ -48,7 +48,7 @@ export default async function Home({ searchParams }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Sputnik Climbing</h1>
-          <p className="text-muted-foreground text-sm">Occupancy tracker</p>
+          <p className="text-muted-foreground text-sm">Seguimiento de aforo</p>
         </div>
         <div className="flex items-center gap-2">
           <Suspense>
@@ -60,7 +60,7 @@ export default async function Home({ searchParams }: Props) {
 
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Live occupancy — all venues
+          Aforo en tiempo real — todos los centros
         </h2>
         <LiveCards readings={liveReadings} />
       </section>
@@ -68,7 +68,7 @@ export default async function Home({ searchParams }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Occupancy heatmap — {selectedVenueName}
+            Mapa de calor — {selectedVenueName}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -79,7 +79,7 @@ export default async function Home({ searchParams }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Occupancy over time — {selectedVenueName} (last 30 days)
+            Evolución del aforo — {selectedVenueName} (últimos 30 días)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -91,7 +91,7 @@ export default async function Home({ searchParams }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Average by hour — {selectedVenueName}
+              Media por hora — {selectedVenueName}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -102,7 +102,7 @@ export default async function Home({ searchParams }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Average by day — {selectedVenueName}
+              Media por día — {selectedVenueName}
             </CardTitle>
           </CardHeader>
           <CardContent>

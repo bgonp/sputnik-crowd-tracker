@@ -22,7 +22,7 @@ export function LiveCards({ readings }: { readings: LiveReading[] }) {
               {r.percentage}%
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {r.occupancy} / {r.capacity} people
+              {r.occupancy} / {r.capacity} personas
             </p>
           </CardContent>
         </Card>

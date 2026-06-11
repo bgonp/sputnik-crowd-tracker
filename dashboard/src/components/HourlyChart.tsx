@@ -11,7 +11,7 @@ export function HourlyChart({ data }: { data: HourlyBar[] }) {
   }));
 
   return (
-    <ChartContainer config={{ occupancy: { label: "Avg occupancy", color: "hsl(var(--chart-1))" } }} className="h-52 w-full">
+    <ChartContainer config={{ occupancy: { label: "Aforo medio", color: "hsl(var(--chart-1))" } }} className="h-52 w-full">
       <BarChart data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={2} />

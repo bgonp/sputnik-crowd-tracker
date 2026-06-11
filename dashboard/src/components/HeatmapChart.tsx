@@ -33,7 +33,7 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
               return (
                 <div
                   key={h}
-                  title={pct > 0 ? `${day} ${HOUR_LABELS[h]}: ${pct}%` : "No data"}
+                  title={pct > 0 ? `${day} ${HOUR_LABELS[h]}: ${pct}%` : "Sin datos"}
                   className={`w-8 h-6 m-px rounded-sm ${cellColor(pct)}`}
                 />
               );
@@ -41,12 +41,12 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
           </div>
         ))}
         <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-          <span>Low</span>
+          <span>Bajo</span>
           <div className="w-4 h-4 rounded-sm bg-green-200" />
           <div className="w-4 h-4 rounded-sm bg-yellow-200" />
           <div className="w-4 h-4 rounded-sm bg-orange-300" />
           <div className="w-4 h-4 rounded-sm bg-red-400" />
-          <span>High</span>
+          <span>Alto</span>
         </div>
       </div>
     </div>

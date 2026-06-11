@@ -6,7 +6,7 @@ import type { TimeSeriesPoint } from "@/lib/queries";
 
 export function TimeSeriesChart({ data }: { data: TimeSeriesPoint[] }) {
   const chartData = data.map((d) => ({
-    time: new Date(d.timestamp).toLocaleString("en-GB", {
+    time: new Date(d.timestamp).toLocaleString("es-ES", {
       month: "short",
       day: "numeric",
       hour: "2-digit",
@@ -16,7 +16,7 @@ export function TimeSeriesChart({ data }: { data: TimeSeriesPoint[] }) {
   }));
 
   return (
-    <ChartContainer config={{ occupancy: { label: "Occupancy", color: "hsl(var(--chart-1))" } }} className="h-64 w-full">
+    <ChartContainer config={{ occupancy: { label: "Aforo", color: "hsl(var(--chart-1))" } }} className="h-64 w-full">
       <LineChart data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
