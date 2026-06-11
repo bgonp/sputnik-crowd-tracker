@@ -49,6 +49,11 @@ export interface LiveReading {
   timestamp: string;
 }
 
+export interface DailyVisitorCount {
+  venueId: number;
+  total: number;
+}
+
 export async function getVenues(): Promise<Venue[]> {
   const result = await db.execute(
     "SELECT DISTINCT venue_id AS id, venue_name AS name FROM readings ORDER BY venue_id"
@@ -68,6 +73,23 @@ export async function getLiveReadings(): Promise<LiveReading[]> {
     ORDER BY venue_id
   `);
   return toPlain<LiveReading>(result.rows);
+}
+
+export async function getTodayVisitorCounts(): Promise<DailyVisitorCount[]> {
+  const offsetMod = madridOffsetModifier();
+  const result = await db.execute({
+    sql: `
+      SELECT
+        venue_id AS venueId,
+        MAX(entries) AS total
+      FROM readings
+      WHERE strftime('%Y-%m-%d', datetime(timestamp, ?)) = strftime('%Y-%m-%d', 'now', ?)
+        AND capacity > 0
+      GROUP BY venue_id
+    `,
+    args: [offsetMod, offsetMod],
+  });
+  return toPlain<DailyVisitorCount>(result.rows);
 }
 
 export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {

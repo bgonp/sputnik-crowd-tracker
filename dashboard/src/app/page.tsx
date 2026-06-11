@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   getVenues,
   getLiveReadings,
+  getTodayVisitorCounts,
   getHeatmap,
   getTimeSeries,
   getHourlyAverages,
@@ -25,7 +26,11 @@ interface Props {
 export default async function Home({ searchParams }: Props) {
   const { venue } = await searchParams;
 
-  const [venues, liveReadings] = await Promise.all([getVenues(), getLiveReadings()]);
+  const [venues, liveReadings, todayVisitorCounts] = await Promise.all([
+    getVenues(),
+    getLiveReadings(),
+    getTodayVisitorCounts(),
+  ]);
 
   const defaultVenueId = venues[0]?.id ?? 1;
   const selectedVenueId = venue ? parseInt(venue, 10) : defaultVenueId;
@@ -62,7 +67,7 @@ export default async function Home({ searchParams }: Props) {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Aforo en tiempo real — todos los centros
         </h2>
-        <LiveCards readings={liveReadings} />
+        <LiveCards readings={liveReadings} todayCounts={todayVisitorCounts} />
       </section>
 
       <Card>
