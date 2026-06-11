@@ -22,20 +22,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Debug — runner IP and raw HTTP response
-        run: |
-          echo "=== Runner public IP ==="
-          curl -s https://api.ipify.org
-          echo ""
-          echo "=== Raw response from gym page ==="
-          curl -v -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-            -H "Accept-Language: es-ES,es;q=0.9,en;q=0.8" \
-            -H "Sec-Fetch-Dest: document" \
-            -H "Sec-Fetch-Mode: navigate" \
-            -H "Sec-Fetch-Site: none" \
-            "https://sputnikclimbing.deporsite.net/aforo-guindalera" 2>&1 | head -80
-
       - run: pnpm scrape
         env:
           TURSO_URL: ${{ secrets.TURSO_URL }}

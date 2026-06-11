@@ -1,32 +1,29 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Venue } from "@/lib/queries";
 
 export function VenueSelector({ venues, selectedId }: { venues: Venue[]; selectedId: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function onChange(value: string | null) {
-    if (!value) return;
+  function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("venue", value);
+    params.set("venue", e.target.value);
     router.push(`?${params.toString()}`);
   }
 
   return (
-    <Select value={String(selectedId)} onValueChange={onChange}>
-      <SelectTrigger className="w-56">
-        <SelectValue placeholder="Select venue" />
-      </SelectTrigger>
-      <SelectContent>
-        {venues.map((v) => (
-          <SelectItem key={v.id} value={String(v.id)}>
-            {v.name.replace(" Principal", "")}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <select
+      value={String(selectedId)}
+      onChange={onChange}
+      className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+    >
+      {venues.map((v) => (
+        <option key={String(v.id)} value={String(v.id)}>
+          {String(v.name).replace(" Principal", "")}
+        </option>
+      ))}
+    </select>
   );
 }
