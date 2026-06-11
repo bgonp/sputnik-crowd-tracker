@@ -5,6 +5,15 @@ function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
 }
 
+function madridOffsetModifier(): string {
+  const now = new Date();
+  const madridHour = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })).getHours();
+  let offset = madridHour - now.getUTCHours();
+  if (offset > 12) offset -= 24;
+  if (offset < -12) offset += 24;
+  return `${offset >= 0 ? "+" : ""}${offset} hours`;
+}
+
 export interface Venue {
   id: number;
   name: string;
@@ -63,18 +72,19 @@ export async function getLiveReadings(): Promise<LiveReading[]> {
 
 export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {
   const placeholders = venueIds.map(() => "?").join(",");
+  const offsetMod = madridOffsetModifier();
   const result = await db.execute({
     sql: `
       SELECT
-        CAST(strftime('%w', timestamp) AS INTEGER) AS dayRaw,
-        CAST(strftime('%H', timestamp) AS INTEGER) AS hour,
+        CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
+        CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) AS hour,
         ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw, hour
       ORDER BY dayRaw, hour
     `,
-    args: venueIds,
+    args: [offsetMod, offsetMod, ...venueIds],
   });
 
   return toPlain<{ dayRaw: number; hour: number; avgPercentage: number }>(result.rows).map(
@@ -107,34 +117,36 @@ export async function getTimeSeries(
 
 export async function getHourlyAverages(venueIds: number[]): Promise<HourlyBar[]> {
   const placeholders = venueIds.map(() => "?").join(",");
+  const offsetMod = madridOffsetModifier();
   const result = await db.execute({
     sql: `
       SELECT
-        CAST(strftime('%H', timestamp) AS INTEGER) AS hour,
+        CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) AS hour,
         ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY hour
       ORDER BY hour
     `,
-    args: venueIds,
+    args: [offsetMod, ...venueIds],
   });
   return toPlain<HourlyBar>(result.rows);
 }
 
 export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> {
   const placeholders = venueIds.map(() => "?").join(",");
+  const offsetMod = madridOffsetModifier();
   const result = await db.execute({
     sql: `
       SELECT
-        CAST(strftime('%w', timestamp) AS INTEGER) AS dayRaw,
+        CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
         ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw
       ORDER BY dayRaw
     `,
-    args: venueIds,
+    args: [offsetMod, ...venueIds],
   });
   return toPlain<{ dayRaw: number; avgPercentage: number }>(result.rows).map((r) => ({
     day: r.dayRaw === 0 ? 6 : r.dayRaw - 1,
