@@ -6,6 +6,7 @@ import { HourlyChart } from "@/components/HourlyChart";
 import { DailyChart } from "@/components/DailyChart";
 import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import { VenueSelector } from "@/components/VenueSelector";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   getVenues,
   getLiveReadings,
@@ -49,9 +50,12 @@ export default async function Home({ searchParams }: Props) {
           <h1 className="text-2xl font-bold">Sputnik Climbing</h1>
           <p className="text-muted-foreground text-sm">Occupancy tracker</p>
         </div>
-        <Suspense>
-          <VenueSelector venues={venues} selectedId={selectedVenueId} />
-        </Suspense>
+        <div className="flex items-center gap-2">
+          <Suspense>
+            <VenueSelector venues={venues} selectedId={selectedVenueId} />
+          </Suspense>
+          <ThemeToggle />
+        </div>
       </div>
 
       <section>
