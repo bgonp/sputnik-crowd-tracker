@@ -1,10 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
 
-function occupancyColor(pct: number): string {
-  if (pct < 40) return "text-green-600";
-  if (pct < 70) return "text-yellow-500";
-  return "text-red-500";
+function occupancyColor(pct: number): React.CSSProperties {
+  const hue = 120 - (pct / 100) * 120;
+  return { color: `hsl(${hue} 70% 45%)` };
 }
 
 interface Props {
@@ -27,7 +26,7 @@ export function LiveCards({ readings, todayCounts }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className={`text-3xl font-bold ${occupancyColor(r.percentage)}`}>
+              <p className="text-3xl font-bold" style={occupancyColor(r.percentage)}>
                 {r.percentage}%
               </p>
               <p className="text-xs text-muted-foreground mt-1">
