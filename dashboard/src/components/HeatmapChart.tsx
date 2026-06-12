@@ -16,10 +16,10 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
     <div className="overflow-x-auto">
       <div className="min-w-max">
         <div className="flex">
-          <div className="w-8" />
+          <div className="w-8 m-px" />
           {HOUR_LABELS.map((label, h) => (
-            <div key={h} className="w-8 text-center text-[10px] text-muted-foreground">
-              {h % 3 === 0 ? label.slice(0, 2) : ""}
+            <div key={h} className="w-8 m-px text-center text-[10px] text-muted-foreground">
+              {label.slice(0, 2)}
             </div>
           ))}
         </div>
