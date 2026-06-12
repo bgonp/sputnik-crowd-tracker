@@ -178,8 +178,9 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
     `,
     args: [offsetMod, ...venueIds],
   });
-  return toPlain<{ dayRaw: number; avgPercentage: number }>(result.rows).map((r) => ({
+  return toPlain<{ dayRaw: number; avgPercentage: number; avgOccupancy: number }>(result.rows).map((r) => ({
     day: r.dayRaw === 0 ? 6 : r.dayRaw - 1,
     avgPercentage: r.avgPercentage,
+    avgOccupancy: r.avgOccupancy,
   }));
 }
