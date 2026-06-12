@@ -5,7 +5,6 @@ import { HeatmapChart } from "@/components/HeatmapChart";
 import { HourlyChart } from "@/components/HourlyChart";
 import { DailyChart } from "@/components/DailyChart";
 import { TimeSeriesChart } from "@/components/TimeSeriesChart";
-import { VenueSelector } from "@/components/VenueSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
 import {
@@ -59,9 +58,6 @@ export default async function Home({ searchParams }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Suspense>
-            <VenueSelector venues={venues} selectedId={selectedVenueId} />
-          </Suspense>
-          <Suspense>
             <UnitToggle unit={unit} />
           </Suspense>
           <ThemeToggle />
@@ -72,7 +68,9 @@ export default async function Home({ searchParams }: Props) {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Aforo en tiempo real — todos los centros
         </h2>
-        <LiveCards readings={liveReadings} todayCounts={todayVisitorCounts} />
+        <Suspense>
+          <LiveCards readings={liveReadings} todayCounts={todayVisitorCounts} selectedId={selectedVenueId} />
+        </Suspense>
       </section>
 
       <Card>
