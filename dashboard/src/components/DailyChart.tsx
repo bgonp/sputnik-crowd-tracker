@@ -12,7 +12,7 @@ export function DailyChart({ data }: { data: DailyBar[] }) {
   }));
 
   return (
-    <ChartContainer config={{ occupancy: { label: "Aforo medio", color: "hsl(var(--chart-2))" } }} className="h-52 w-full">
+    <ChartContainer config={{ occupancy: { label: "Aforo medio", color: "var(--chart-4)" } }} className="h-52 w-full">
       <BarChart data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="day" tick={{ fontSize: 11 }} />

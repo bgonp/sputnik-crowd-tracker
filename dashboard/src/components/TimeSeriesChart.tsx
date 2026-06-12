@@ -16,7 +16,7 @@ export function TimeSeriesChart({ data }: { data: TimeSeriesPoint[] }) {
   }));
 
   return (
-    <ChartContainer config={{ occupancy: { label: "Aforo", color: "hsl(var(--chart-1))" } }} className="h-64 w-full">
+    <ChartContainer config={{ occupancy: { label: "Aforo", color: "var(--primary)" } }} className="h-64 w-full">
       <LineChart data={chartData}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
