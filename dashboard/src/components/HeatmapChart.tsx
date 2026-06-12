@@ -32,9 +32,15 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
                 <div
                   key={h}
                   title={pct > 0 ? `${day} ${HOUR_LABELS[h]}: ${pct}%` : "Sin datos"}
-                  className={`w-8 h-6 m-px rounded-sm ${pct === 0 ? "bg-muted" : ""}`}
+                  className={`w-8 h-6 m-px rounded-sm flex items-center justify-center ${pct === 0 ? "bg-muted" : ""}`}
                   style={cellStyle(pct)}
-                />
+                >
+                  {pct > 0 && (
+                    <span className="text-[9px] leading-none font-medium text-black/70 select-none">
+                      {pct}%
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
