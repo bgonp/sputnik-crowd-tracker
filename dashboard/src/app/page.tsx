@@ -6,6 +6,7 @@ import { HourlyChart } from "@/components/HourlyChart";
 import { DailyChart } from "@/components/DailyChart";
 import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
 import {
   getVenues,
@@ -17,7 +18,7 @@ import {
   getDailyAverages,
 } from "@/lib/queries";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 interface Props {
   searchParams: Promise<{ venue?: string; unit?: string }>;
@@ -51,6 +52,7 @@ export default async function Home({ searchParams }: Props) {
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
+      <AutoRefresh intervalMs={60_000} />
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Sputnik Climbing</h1>
