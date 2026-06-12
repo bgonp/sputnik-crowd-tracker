@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
 
@@ -18,28 +20,42 @@ interface Props {
 export function LiveCards({ readings, todayCounts, selectedId }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+  const [pendingId, setPendingId] = useState<number | null>(null);
   const countByVenue = new Map(todayCounts.map((c) => [c.venueId, c.total]));
 
+  useEffect(() => {
+    if (!isPending) setPendingId(null);
+  }, [isPending]);
+
   function selectVenue(venueId: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("venue", String(venueId));
-    router.push(`?${params.toString()}`, { scroll: false });
+    if (venueId === (pendingId ?? selectedId)) return;
+    setPendingId(venueId);
+    startTransition(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("venue", String(venueId));
+      router.push(`?${params.toString()}`, { scroll: false });
+    });
   }
+
+  const effectiveSelectedId = pendingId ?? selectedId;
 
   return (
     <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
       {readings.map((r) => {
         const todayTotal = countByVenue.get(r.venueId);
-        const isSelected = r.venueId === selectedId;
+        const isSelected = r.venueId === effectiveSelectedId;
+        const isLoading = r.venueId === pendingId && isPending;
         return (
           <Card
             key={r.venueId}
             onClick={() => selectVenue(r.venueId)}
-            className={`cursor-pointer transition-shadow ${isSelected ? "ring-2 ring-primary" : "hover:shadow-md"}`}
+            className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
           >
             <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                 {r.venueName.replace(" Principal", "")}
+                {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
               </CardTitle>
             </CardHeader>
             <CardContent>

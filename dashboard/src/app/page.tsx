@@ -1,22 +1,15 @@
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
-import { HeatmapChart } from "@/components/HeatmapChart";
-import { HourlyChart } from "@/components/HourlyChart";
-import { DailyChart } from "@/components/DailyChart";
-import { TimeSeriesChart } from "@/components/TimeSeriesChart";
+import { ChartSkeleton } from "@/components/ChartSkeleton";
+import { HeatmapSection } from "@/components/sections/HeatmapSection";
+import { TimeSeriesSection } from "@/components/sections/TimeSeriesSection";
+import { HourlySection } from "@/components/sections/HourlySection";
+import { DailySection } from "@/components/sections/DailySection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
-import {
-  getVenues,
-  getLiveReadings,
-  getTodayVisitorCounts,
-  getHeatmap,
-  getTimeSeries,
-  getHourlyAverages,
-  getDailyAverages,
-} from "@/lib/queries";
+import { getVenues, getLiveReadings, getTodayVisitorCounts } from "@/lib/queries";
 
 export const revalidate = 60;
 
@@ -51,13 +44,6 @@ export default async function Home({ searchParams }: Props) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const nowIso = now.toISOString();
 
-  const [heatmapData, timeSeriesData, hourlyData, dailyData] = await Promise.all([
-    getHeatmap([selectedVenueId]),
-    getTimeSeries(selectedVenueId, thirtyDaysAgo, nowIso),
-    getHourlyAverages([selectedVenueId]),
-    getDailyAverages([selectedVenueId]),
-  ]);
-
   const selectedVenueName =
     venues.find((v) => v.id === selectedVenueId)?.name.replace(" Principal", "") ?? "";
 
@@ -85,12 +71,12 @@ export default async function Home({ searchParams }: Props) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Mapa de calor — {selectedVenueName}
-          </CardTitle>
+          <CardTitle className="text-base">Mapa de calor — {selectedVenueName}</CardTitle>
         </CardHeader>
         <CardContent>
-          <HeatmapChart data={heatmapData} />
+          <Suspense fallback={<ChartSkeleton className="h-48" />}>
+            <HeatmapSection venueId={selectedVenueId} />
+          </Suspense>
         </CardContent>
       </Card>
 
@@ -106,7 +92,9 @@ export default async function Home({ searchParams }: Props) {
           </div>
         </CardHeader>
         <CardContent>
-          <TimeSeriesChart data={timeSeriesData} unit={unit} />
+          <Suspense fallback={<ChartSkeleton />}>
+            <TimeSeriesSection venueId={selectedVenueId} unit={unit} from={thirtyDaysAgo} to={nowIso} />
+          </Suspense>
         </CardContent>
       </Card>
 
@@ -114,38 +102,37 @@ export default async function Home({ searchParams }: Props) {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                Media por hora — {selectedVenueName}
-              </CardTitle>
+              <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
               <Suspense>
                 <UnitToggle unit={unit} />
               </Suspense>
             </div>
           </CardHeader>
           <CardContent>
-            <HourlyChart
-                data={hourlyData}
+            <Suspense fallback={<ChartSkeleton />}>
+              <HourlySection
+                venueId={selectedVenueId}
                 unit={unit}
                 currentHour={madridHour}
-                currentPct={currentReading?.percentage}
-                currentOccupancy={currentReading?.occupancy}
+                currentReading={currentReading}
               />
+            </Suspense>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                Media por día — {selectedVenueName}
-              </CardTitle>
+              <CardTitle className="text-base">Media por día — {selectedVenueName}</CardTitle>
               <Suspense>
                 <UnitToggle unit={unit} />
               </Suspense>
             </div>
           </CardHeader>
           <CardContent>
-            <DailyChart data={dailyData} unit={unit} />
+            <Suspense fallback={<ChartSkeleton />}>
+              <DailySection venueId={selectedVenueId} unit={unit} />
+            </Suspense>
           </CardContent>
         </Card>
       </div>
