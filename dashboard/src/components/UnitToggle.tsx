@@ -16,7 +16,7 @@ export function UnitToggle({ unit }: { unit: Unit }) {
     } else {
       params.delete("unit");
     }
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   }
 
   return (

@@ -23,7 +23,7 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
   function selectVenue(venueId: number) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("venue", String(venueId));
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   }
 
   return (
