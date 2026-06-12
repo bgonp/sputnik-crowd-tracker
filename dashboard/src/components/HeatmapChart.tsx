@@ -5,8 +5,8 @@ import type { HeatmapCell } from "@/lib/queries";
 
 function cellStyle(pct: number): React.CSSProperties {
   if (pct === 0) return {};
-  const hue = 120 - (pct / 100) * 120;
-  return { backgroundColor: `hsl(${hue} 70% 60%)` };
+  const hue = 120 - Math.pow(pct / 100, 0.5) * 120;
+  return { backgroundColor: `hsl(${hue.toFixed(1)} 70% 60%)` };
 }
 
 export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
@@ -49,7 +49,7 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
           <span>Bajo</span>
           <div
             className="h-3 w-32 rounded-sm"
-            style={{ background: "linear-gradient(to right, hsl(120 70% 60%), hsl(60 70% 60%), hsl(0 70% 60%))" }}
+            style={{ background: "linear-gradient(to right, hsl(120 70% 60%), hsl(72 70% 60%), hsl(40 70% 60%), hsl(20 70% 60%), hsl(0 70% 60%))" }}
           />
           <span>Alto</span>
         </div>

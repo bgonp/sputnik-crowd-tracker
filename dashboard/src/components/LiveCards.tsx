@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
 
 function occupancyColor(pct: number): React.CSSProperties {
-  const hue = 120 - (pct / 100) * 120;
-  return { color: `hsl(${hue} 70% 45%)` };
+  const hue = 120 - Math.pow(pct / 100, 0.5) * 120;
+  return { color: `hsl(${hue.toFixed(1)} 70% 45%)` };
 }
 
 interface Props {
