@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "scrape": "pnpm --filter scraper start",
+    "seed-dev": "pnpm --filter scraper seed-dev",
     "test": "pnpm -r run test"
   }
 }

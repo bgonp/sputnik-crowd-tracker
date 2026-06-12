@@ -2,3 +2,7 @@ node_modules/
 .env
 .env.local
 .next/
+
+dev.db
+dev.db-shm
+dev.db-wal

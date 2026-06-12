@@ -28,21 +28,32 @@ export default async function Home({ searchParams }: Props) {
   const { venue, unit: unitParam } = await searchParams;
   const unit: Unit = unitParam === "absolute" ? "absolute" : "percentage";
 
+  const now = process.env.MOCK_NOW ? new Date(process.env.MOCK_NOW) : new Date();
+
   const [venues, liveReadings, todayVisitorCounts] = await Promise.all([
     getVenues(),
     getLiveReadings(),
-    getTodayVisitorCounts(),
+    getTodayVisitorCounts(now),
   ]);
 
   const defaultVenueId = venues[0]?.id ?? 1;
   const selectedVenueId = venue ? parseInt(venue, 10) : defaultVenueId;
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const now = new Date().toISOString();
+  const currentReading = liveReadings.find((r) => r.venueId === selectedVenueId);
+  const madridHour = parseInt(
+    new Intl.DateTimeFormat("es-ES", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit",
+      hour12: false,
+    }).format(now)
+  );
+
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const nowIso = now.toISOString();
 
   const [heatmapData, timeSeriesData, hourlyData, dailyData] = await Promise.all([
     getHeatmap([selectedVenueId]),
-    getTimeSeries(selectedVenueId, thirtyDaysAgo, now),
+    getTimeSeries(selectedVenueId, thirtyDaysAgo, nowIso),
     getHourlyAverages([selectedVenueId]),
     getDailyAverages([selectedVenueId]),
   ]);
@@ -112,7 +123,13 @@ export default async function Home({ searchParams }: Props) {
             </div>
           </CardHeader>
           <CardContent>
-            <HourlyChart data={hourlyData} unit={unit} />
+            <HourlyChart
+                data={hourlyData}
+                unit={unit}
+                currentHour={madridHour}
+                currentPct={currentReading?.percentage}
+                currentOccupancy={currentReading?.occupancy}
+              />
           </CardContent>
         </Card>
 

@@ -5,8 +5,7 @@ function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
 }
 
-export function madridOffsetModifier(): string {
-  const now = new Date();
+export function madridOffsetModifier(now = new Date()): string {
   const madridHour = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })).getHours();
   let offset = madridHour - now.getUTCHours();
   if (offset > 12) offset -= 24;
@@ -79,19 +78,19 @@ export async function getLiveReadings(): Promise<LiveReading[]> {
   return toPlain<LiveReading>(result.rows);
 }
 
-export async function getTodayVisitorCounts(): Promise<DailyVisitorCount[]> {
-  const offsetMod = madridOffsetModifier();
+export async function getTodayVisitorCounts(now = new Date()): Promise<DailyVisitorCount[]> {
+  const offsetMod = madridOffsetModifier(now);
   const result = await db.execute({
     sql: `
       SELECT
         venue_id AS venueId,
         MAX(entries) AS total
       FROM readings
-      WHERE strftime('%Y-%m-%d', datetime(timestamp, ?)) = strftime('%Y-%m-%d', 'now', ?)
+      WHERE strftime('%Y-%m-%d', datetime(timestamp, ?)) = strftime('%Y-%m-%d', datetime(?, ?))
         AND capacity > 0
       GROUP BY venue_id
     `,
-    args: [offsetMod, offsetMod],
+    args: [offsetMod, now.toISOString(), offsetMod],
   });
   return toPlain<DailyVisitorCount>(result.rows);
 }

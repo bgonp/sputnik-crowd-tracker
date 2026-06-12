@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mock": "TURSO_URL=file:../dev.db TURSO_AUTH_TOKEN= next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
