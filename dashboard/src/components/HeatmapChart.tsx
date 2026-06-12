@@ -3,12 +3,10 @@
 import { DAY_LABELS, HOUR_LABELS } from "@/lib/labels";
 import type { HeatmapCell } from "@/lib/queries";
 
-function cellColor(pct: number): string {
-  if (pct === 0) return "bg-muted";
-  if (pct < 30) return "bg-green-200";
-  if (pct < 50) return "bg-yellow-200";
-  if (pct < 70) return "bg-orange-300";
-  return "bg-red-400";
+function cellStyle(pct: number): React.CSSProperties {
+  if (pct === 0) return {};
+  const hue = 120 - (pct / 100) * 120;
+  return { backgroundColor: `hsl(${hue} 70% 60%)` };
 }
 
 export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
@@ -34,7 +32,8 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
                 <div
                   key={h}
                   title={pct > 0 ? `${day} ${HOUR_LABELS[h]}: ${pct}%` : "Sin datos"}
-                  className={`w-8 h-6 m-px rounded-sm ${cellColor(pct)}`}
+                  className={`w-8 h-6 m-px rounded-sm ${pct === 0 ? "bg-muted" : ""}`}
+                  style={cellStyle(pct)}
                 />
               );
             })}
@@ -42,10 +41,10 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
         ))}
         <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
           <span>Bajo</span>
-          <div className="w-4 h-4 rounded-sm bg-green-200" />
-          <div className="w-4 h-4 rounded-sm bg-yellow-200" />
-          <div className="w-4 h-4 rounded-sm bg-orange-300" />
-          <div className="w-4 h-4 rounded-sm bg-red-400" />
+          <div
+            className="h-3 w-32 rounded-sm"
+            style={{ background: "linear-gradient(to right, hsl(120 70% 60%), hsl(60 70% 60%), hsl(0 70% 60%))" }}
+          />
           <span>Alto</span>
         </div>
       </div>
