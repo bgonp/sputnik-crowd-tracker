@@ -108,6 +108,7 @@ export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw, hour
+      HAVING hour >= 7
       ORDER BY dayRaw, hour
     `,
     args: [offsetMod, offsetMod, ...venueIds],
@@ -155,6 +156,7 @@ export async function getHourlyAverages(venueIds: number[]): Promise<HourlyBar[]
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY hour
+      HAVING hour >= 7
       ORDER BY hour
     `,
     args: [offsetMod, ...venueIds],

@@ -1,6 +1,6 @@
 "use client";
 
-import { DAY_LABELS, HOUR_LABELS } from "@/lib/labels";
+import { DAY_LABELS, HOUR_LABELS, OPENING_HOUR } from "@/lib/labels";
 import type { HeatmapCell } from "@/lib/queries";
 
 function cellStyle(pct: number): React.CSSProperties {
@@ -17,8 +17,8 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
       <div className="min-w-max">
         <div className="flex">
           <div className="w-8 m-px" />
-          {HOUR_LABELS.map((label, h) => (
-            <div key={h} className="w-8 m-px text-center text-[10px] text-muted-foreground">
+          {HOUR_LABELS.slice(OPENING_HOUR).map((label, i) => (
+            <div key={i} className="w-8 m-px text-center text-[10px] text-muted-foreground">
               {label.slice(0, 2)}
             </div>
           ))}
@@ -26,7 +26,8 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
         {DAY_LABELS.map((day, d) => (
           <div key={d} className="flex items-center gap-0">
             <div className="w-8 text-[11px] text-muted-foreground text-right pr-1">{day}</div>
-            {HOUR_LABELS.map((_, h) => {
+            {HOUR_LABELS.slice(OPENING_HOUR).map((_, i) => {
+              const h = i + OPENING_HOUR;
               const pct = lookup.get(`${d}-${h}`) ?? 0;
               return (
                 <div
