@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DAY_LABELS, HOUR_LABELS } from "../labels";
+import { DAY_LABELS, HOUR_LABELS, OPENING_HOUR } from "../labels";
 
 describe("DAY_LABELS", () => {
   it("has exactly 7 entries", () => {
@@ -39,5 +39,15 @@ describe("HOUR_LABELS", () => {
   it("hours are zero-padded", () => {
     expect(HOUR_LABELS[1]).toBe("01:00");
     expect(HOUR_LABELS[9]).toBe("09:00");
+  });
+});
+
+describe("OPENING_HOUR", () => {
+  it("is 7 (gym opens at 07:00 Madrid time)", () => {
+    expect(OPENING_HOUR).toBe(7);
+  });
+
+  it("is a valid index into HOUR_LABELS", () => {
+    expect(HOUR_LABELS[OPENING_HOUR]).toBe("07:00");
   });
 });

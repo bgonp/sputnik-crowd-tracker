@@ -86,6 +86,13 @@ describe("getHourlyAverages", () => {
     expect(result).toHaveProperty("avgPercentage", 55);
     expect(result).toHaveProperty("hour", 9);
   });
+
+  it("filters out pre-opening hours in SQL", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getHourlyAverages([1]);
+    const { sql } = vi.mocked(db.execute).mock.calls[0][0] as { sql: string };
+    expect(sql).toMatch(/HAVING hour >= 7/i);
+  });
 });
 
 // --- getHeatmap ---
@@ -114,6 +121,13 @@ describe("getHeatmap", () => {
     const [result] = await getHeatmap([1]);
     expect(result.hour).toBe(14);
     expect(result.avgPercentage).toBe(72);
+  });
+
+  it("filters out pre-opening hours in SQL", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getHeatmap([1]);
+    const { sql } = vi.mocked(db.execute).mock.calls[0][0] as { sql: string };
+    expect(sql).toMatch(/HAVING hour >= 7/i);
   });
 });
 
