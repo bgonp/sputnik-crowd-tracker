@@ -59,9 +59,6 @@ export default async function Home({ searchParams }: Props) {
           <p className="text-muted-foreground text-sm">Seguimiento de aforo</p>
         </div>
         <div className="flex items-center gap-2">
-          <Suspense>
-            <UnitToggle unit={unit} />
-          </Suspense>
           <ThemeToggle />
         </div>
       </div>
@@ -88,9 +85,14 @@ export default async function Home({ searchParams }: Props) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Evolución del aforo — {selectedVenueName} (últimos 30 días)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              Evolución del aforo — {selectedVenueName} (últimos 30 días)
+            </CardTitle>
+            <Suspense>
+              <UnitToggle unit={unit} />
+            </Suspense>
+          </div>
         </CardHeader>
         <CardContent>
           <TimeSeriesChart data={timeSeriesData} unit={unit} />
@@ -100,9 +102,14 @@ export default async function Home({ searchParams }: Props) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              Media por hora — {selectedVenueName}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Media por hora — {selectedVenueName}
+              </CardTitle>
+              <Suspense>
+                <UnitToggle unit={unit} />
+              </Suspense>
+            </div>
           </CardHeader>
           <CardContent>
             <HourlyChart data={hourlyData} unit={unit} />
@@ -111,9 +118,14 @@ export default async function Home({ searchParams }: Props) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              Media por día — {selectedVenueName}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Media por día — {selectedVenueName}
+              </CardTitle>
+              <Suspense>
+                <UnitToggle unit={unit} />
+              </Suspense>
+            </div>
           </CardHeader>
           <CardContent>
             <DailyChart data={dailyData} unit={unit} />
