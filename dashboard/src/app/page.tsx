@@ -7,6 +7,7 @@ import { DailyChart } from "@/components/DailyChart";
 import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import { VenueSelector } from "@/components/VenueSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UnitToggle, type Unit } from "@/components/UnitToggle";
 import {
   getVenues,
   getLiveReadings,
@@ -20,11 +21,12 @@ import {
 export const revalidate = 300;
 
 interface Props {
-  searchParams: Promise<{ venue?: string }>;
+  searchParams: Promise<{ venue?: string; unit?: string }>;
 }
 
 export default async function Home({ searchParams }: Props) {
-  const { venue } = await searchParams;
+  const { venue, unit: unitParam } = await searchParams;
+  const unit: Unit = unitParam === "absolute" ? "absolute" : "percentage";
 
   const [venues, liveReadings, todayVisitorCounts] = await Promise.all([
     getVenues(),
@@ -59,6 +61,9 @@ export default async function Home({ searchParams }: Props) {
           <Suspense>
             <VenueSelector venues={venues} selectedId={selectedVenueId} />
           </Suspense>
+          <Suspense>
+            <UnitToggle unit={unit} />
+          </Suspense>
           <ThemeToggle />
         </div>
       </div>
@@ -88,7 +93,7 @@ export default async function Home({ searchParams }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <TimeSeriesChart data={timeSeriesData} />
+          <TimeSeriesChart data={timeSeriesData} unit={unit} />
         </CardContent>
       </Card>
 
@@ -100,7 +105,7 @@ export default async function Home({ searchParams }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <HourlyChart data={hourlyData} />
+            <HourlyChart data={hourlyData} unit={unit} />
           </CardContent>
         </Card>
 
@@ -111,7 +116,7 @@ export default async function Home({ searchParams }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DailyChart data={dailyData} />
+            <DailyChart data={dailyData} unit={unit} />
           </CardContent>
         </Card>
       </div>

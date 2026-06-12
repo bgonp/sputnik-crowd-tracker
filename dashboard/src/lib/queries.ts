@@ -28,16 +28,20 @@ export interface HeatmapCell {
 export interface TimeSeriesPoint {
   timestamp: string;
   percentage: number;
+  occupancy: number;
+  capacity: number;
 }
 
 export interface HourlyBar {
   hour: number;
   avgPercentage: number;
+  avgOccupancy: number;
 }
 
 export interface DailyBar {
   day: number;
   avgPercentage: number;
+  avgOccupancy: number;
 }
 
 export interface LiveReading {
@@ -126,7 +130,9 @@ export async function getTimeSeries(
   const result = await db.execute({
     sql: `
       SELECT timestamp,
-             ROUND(CAST(occupancy AS REAL) / capacity * 100) AS percentage
+             ROUND(CAST(occupancy AS REAL) / capacity * 100) AS percentage,
+             occupancy,
+             capacity
       FROM readings
       WHERE venue_id = ? AND capacity > 0
         AND timestamp >= ? AND timestamp <= ?
@@ -144,7 +150,8 @@ export async function getHourlyAverages(venueIds: number[]): Promise<HourlyBar[]
     sql: `
       SELECT
         CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) AS hour,
-        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage
+        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage,
+        ROUND(AVG(occupancy)) AS avgOccupancy
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY hour
@@ -162,7 +169,8 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
     sql: `
       SELECT
         CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
-        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage
+        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage,
+        ROUND(AVG(occupancy)) AS avgOccupancy
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw
