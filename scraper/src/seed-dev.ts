@@ -2,12 +2,12 @@ import { createClient } from "@libsql/client";
 import { randomUUID } from "crypto";
 
 const VENUES = [
-  { id: 1, name: "Guindalera Principal", capacity: 120, bias: 1.00 },
-  { id: 2, name: "Tetuán",               capacity: 90,  bias: 0.85 },
-  { id: 3, name: "Moratalaz",            capacity: 80,  bias: 0.75 },
-  { id: 4, name: "Legazpi",              capacity: 100, bias: 0.90 },
-  { id: 5, name: "Villaverde",           capacity: 70,  bias: 0.68 },
-  { id: 6, name: "Vallecas",             capacity: 75,  bias: 0.72 },
+  { id: 1, name: "Alcobendas Principal", capacity: 290, bias: 0.82 },
+  { id: 2, name: "Las Rozas Principal",  capacity: 489, bias: 0.70 },
+  { id: 3, name: "Berango Principal",    capacity: 290, bias: 0.75 },
+  { id: 4, name: "Legazpi Principal",    capacity: 495, bias: 0.88 },
+  { id: 5, name: "Chamberí Principal",   capacity: 292, bias: 0.92 },
+  { id: 6, name: "Guindalera Principal", capacity: 246, bias: 1.00 },
 ];
 
 const OPENING_HOUR = 7;
@@ -119,7 +119,8 @@ async function main() {
 
     for (const venue of VENUES) {
       const venuePrng = makePrng(venue.id * 99991 + d * 7);
-      let currentOcc = 0;
+      let currentPct = 0;
+      let prevOcc = 0;
       let dailyEntries = 0;
       let dailyExits = 0;
 
@@ -130,16 +131,16 @@ async function main() {
 
           const target = baseOccupancy(dow, h, m) * venue.bias * dayFactor;
           const noise  = (venuePrng() - 0.5) * 10;
-          const pct    = clamp(currentOcc + (target - currentOcc) * 0.3 + noise, 0, 100);
-          const occ    = Math.round((pct / 100) * venue.capacity);
+          currentPct   = clamp(currentPct + (target - currentPct) * 0.3 + noise, 0, 100);
+          const occ    = Math.round((currentPct / 100) * venue.capacity);
 
           // Cumulative entries/exits
           const churn = Math.round(occ * 0.03 * venuePrng());
-          const delta = occ - currentOcc;
+          const delta = occ - prevOcc;
           if (delta > 0) dailyEntries += delta + churn;
           else           dailyExits   += -delta + churn;
 
-          currentOcc = occ;
+          prevOcc = occ;
 
           pending.push({
             sql: `INSERT INTO readings
