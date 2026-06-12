@@ -5,7 +5,7 @@ function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
 }
 
-function madridOffsetModifier(): string {
+export function madridOffsetModifier(): string {
   const now = new Date();
   const madridHour = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })).getHours();
   let offset = madridHour - now.getUTCHours();

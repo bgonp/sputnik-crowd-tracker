@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client";
+import { toReadings, type Reading } from "./transform.js";
 
 const GYM_URL = "https://sputnikclimbing.deporsite.net/aforo-guindalera";
 const OCCUPANCY_API_URL =
@@ -20,26 +21,6 @@ const BROWSER_HEADERS = {
   "Sec-Fetch-User": "?1",
   "Upgrade-Insecure-Requests": "1",
 };
-
-interface ApiVenue {
-  IdRecinto: number;
-  Recinto: string;
-  Ocupacion: number;
-  Entradas: number;
-  Salidas: number;
-  Aforo: number;
-}
-
-interface Reading {
-  id: string;
-  timestamp: string;
-  venueId: number;
-  venueName: string;
-  occupancy: number;
-  entries: number;
-  exits: number;
-  capacity: number;
-}
 
 async function fetchCsrfToken(): Promise<{ csrf: string; cookie: string }> {
   const response = await fetch(GYM_URL, {
@@ -69,6 +50,15 @@ async function fetchCsrfToken(): Promise<{ csrf: string; cookie: string }> {
   return { csrf: match[1], cookie };
 }
 
+interface ApiVenue {
+  IdRecinto: number;
+  Recinto: string;
+  Ocupacion: number;
+  Entradas: number;
+  Salidas: number;
+  Aforo: number;
+}
+
 async function fetchOccupancy(csrf: string, cookie: string): Promise<ApiVenue[]> {
   const response = await fetch(OCCUPANCY_API_URL, {
     method: "POST",
@@ -93,20 +83,6 @@ async function fetchOccupancy(csrf: string, cookie: string): Promise<ApiVenue[]>
   return response.json() as Promise<ApiVenue[]>;
 }
 
-function toReadings(venues: ApiVenue[], timestamp: string): Reading[] {
-  return venues
-    .filter((v) => v.Aforo > 0)
-    .map((v) => ({
-      id: crypto.randomUUID(),
-      timestamp,
-      venueId: v.IdRecinto,
-      venueName: v.Recinto,
-      occupancy: v.Ocupacion,
-      entries: v.Entradas,
-      exits: v.Salidas,
-      capacity: v.Aforo,
-    }));
-}
 
 async function insertReadings(readings: Reading[]): Promise<void> {
   const client = createClient({
