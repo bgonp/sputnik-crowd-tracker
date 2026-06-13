@@ -39,12 +39,10 @@ export function HourlyChart({ data, unit, currentHour, currentPct, currentOccupa
     if (currentPct === undefined || currentHourAvgPct === undefined) return undefined;
     if (currentHourAvgPct === 0) return undefined;
     const diff = currentPct - currentHourAvgPct;
-    if (diff > 20)  return "Muy por encima de la media";
-    if (diff > 10)  return "Por encima de la media";
-    if (diff > 4)   return "Un poco por encima de la media";
-    if (diff > -4)  return "En torno a la media";
-    if (diff > -10) return "Un poco por debajo de la media";
-    if (diff > -20) return "Por debajo de la media";
+    if (diff > 15)  return "Muy por encima de la media";
+    if (diff > 5)  return "Por encima de la media";
+    if (diff > -5)  return "En torno a la media";
+    if (diff > -15) return "Por debajo de la media";
     return "Muy por debajo de la media";
   })();
 
