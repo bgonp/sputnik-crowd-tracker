@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm -r run test)",
+      "Bash(pnpm seed-dev)",
+      "Bash(pnpm scrape)",
+      "Bash(pnpm --filter * test)",
+      "Bash(pnpm --filter * run test)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm build)",
+      "Bash(pnpm exec eslint *)",
+      "Bash(pnpm exec tsc *)",
+      "WebFetch(domain:sputnikclimbing.deporsite.net)"
+    ]
+  }
+}
