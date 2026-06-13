@@ -1,0 +1,40 @@
+name: Data freshness
+
+# Alerts (by failing, which emails the repo owner) when the scraper has stopped
+# writing readings — e.g. the Raspberry Pi is down, the gym started IP-blocking,
+# or its CSRF markup changed. This job only READS Turso, so unlike the scraper
+# it can run from GitHub's cloud runners.
+
+on:
+  schedule:
+    # Every 15 minutes, around the clock.
+    - cron: "*/15 * * * *"
+    # If the gym API goes quiet overnight and causes false alarms, swap the line
+    # above for a daytime-only window instead (≈09:00–22:00 Madrid):
+    #   - cron: "*/15 7-20 * * *"
+  workflow_dispatch:
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install scraper dependencies
+        run: pnpm install --frozen-lockfile --filter scraper
+
+      - name: Check data freshness
+        run: pnpm --filter scraper check-freshness
+        env:
+          TURSO_URL: ${{ secrets.TURSO_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          FRESHNESS_THRESHOLD_MINUTES: "15"
