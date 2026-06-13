@@ -1,4 +1,4 @@
-import { getHourlyAverages } from "@/lib/queries";
+import { getCachedHourlyAverages } from "@/lib/cached-queries";
 import { HourlyChart } from "@/components/HourlyChart";
 import type { Unit } from "@/components/UnitToggle";
 import type { LiveReading } from "@/lib/queries";
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export async function HourlySection({ venueId, unit, currentHour, currentReading }: Props) {
-  const data = await getHourlyAverages([venueId]);
+  const data = await getCachedHourlyAverages([venueId]);
   return (
     <HourlyChart
       data={data}

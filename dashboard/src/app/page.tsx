@@ -9,7 +9,11 @@ import { DailySection } from "@/components/sections/DailySection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
-import { getVenues, getLiveReadings, getTodayVisitorCounts } from "@/lib/queries";
+import {
+  getCachedVenues,
+  getCachedLiveReadings,
+  getCachedTodayVisitorCounts,
+} from "@/lib/cached-queries";
 
 export const revalidate = 60;
 
@@ -22,11 +26,14 @@ export default async function Home({ searchParams }: Props) {
   const unit: Unit = unitParam === "absolute" ? "absolute" : "percentage";
 
   const now = process.env.MOCK_NOW ? new Date(process.env.MOCK_NOW) : new Date();
+  // Round to 1-minute intervals so requests arriving milliseconds apart share a cache entry
+  const roundedNow = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
+  const roundedNowIso = roundedNow.toISOString();
 
   const [venues, liveReadings, todayVisitorCounts] = await Promise.all([
-    getVenues(),
-    getLiveReadings(),
-    getTodayVisitorCounts(now),
+    getCachedVenues(),
+    getCachedLiveReadings(),
+    getCachedTodayVisitorCounts(roundedNowIso),
   ]);
 
   const defaultVenueId = venues[0]?.id ?? 1;
@@ -41,8 +48,7 @@ export default async function Home({ searchParams }: Props) {
     }).format(now)
   );
 
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const nowIso = now.toISOString();
+  const thirtyDaysAgo = new Date(roundedNow.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const selectedVenueName =
     venues.find((v) => v.id === selectedVenueId)?.name.replace(" Principal", "") ?? "";
@@ -93,7 +99,7 @@ export default async function Home({ searchParams }: Props) {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<ChartSkeleton />}>
-            <TimeSeriesSection venueId={selectedVenueId} unit={unit} from={thirtyDaysAgo} to={nowIso} />
+            <TimeSeriesSection venueId={selectedVenueId} unit={unit} from={thirtyDaysAgo} to={roundedNowIso} />
           </Suspense>
         </CardContent>
       </Card>

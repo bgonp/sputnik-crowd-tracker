@@ -18,4 +18,9 @@ await client.execute(`
   )
 `);
 
+await client.execute(`
+  CREATE INDEX IF NOT EXISTS idx_readings_venue_ts
+  ON readings (venue_id, timestamp)
+`);
+
 console.log("Migration complete");

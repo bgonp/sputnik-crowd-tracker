@@ -1,4 +1,4 @@
-import { getTimeSeries } from "@/lib/queries";
+import { getCachedTimeSeries } from "@/lib/cached-queries";
 import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import type { Unit } from "@/components/UnitToggle";
 
@@ -10,6 +10,6 @@ interface Props {
 }
 
 export async function TimeSeriesSection({ venueId, unit, from, to }: Props) {
-  const data = await getTimeSeries(venueId, from, to);
+  const data = await getCachedTimeSeries(venueId, from, to);
   return <TimeSeriesChart data={data} unit={unit} />;
 }
