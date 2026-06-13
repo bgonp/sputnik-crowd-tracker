@@ -1,0 +1,157 @@
+# Sputnik Crowd Tracker
+
+Scrapes occupancy data every 60 seconds from the [Sputnik Climbing](https://sputnikclimbing.deporsite.net) gym network, stores it over time in a SQLite/Turso database, and presents a dashboard with charts to find the best (and worst) times to visit.
+
+The dataset is built incrementally — every reading is a snapshot of how full each venue is. With enough history, the dashboard surfaces patterns: which hours are quiet, which days are packed, and how busy a venue is *right now* versus its typical level.
+
+## How it works
+
+```
+┌────────────┐   every 60 sec   ┌─────────────┐   server queries   ┌──────────────┐
+│  scraper   │ ───────────────► │  Turso DB   │ ◄───────────────── │  dashboard   │
+│  (tsx CLI, │  fetch + insert  │  (readings) │   cached reads     │  (Next.js,   │
+│  on a Pi)  │                  │             │                    │  on Vercel)  │
+└────────────┘                  └─────────────┘                    └──────────────┘
+```
+
+1. **Scraper** — fetches the gym page to extract a CSRF token + session cookie, POSTs to the occupancy API, maps the Spanish API fields to English, generates a UUID per reading, and batch-inserts one row per venue into Turso.
+2. **Database** — a single `readings` table; every metric (e.g. occupancy percentage) is derived on query.
+3. **Dashboard** — a Next.js App Router app whose server components query Turso directly (no API layer), with `unstable_cache` wrappers to keep Turso reads low.
+
+## Tech stack
+
+| Concern           | Choice                                              |
+| ----------------- | --------------------------------------------------- |
+| Language          | TypeScript throughout                               |
+| Monorepo          | pnpm workspaces (`scraper` + `dashboard`)           |
+| Scraper runtime   | `tsx` CLI on a Raspberry Pi, cron every 60s         |
+| Database          | Turso (LibSQL/SQLite) via `@libsql/client`          |
+| Dashboard         | Next.js 16 App Router, React 19, server components  |
+| UI                | Tailwind CSS 4, shadcn/ui + Base UI, lucide-react   |
+| Charts            | Recharts 3                                          |
+| Theming           | next-themes (dark/light)                            |
+| Tests             | Vitest                                              |
+| Dashboard hosting | Vercel                                              |
+
+## Repository layout
+
+```
+sputnik-crowd-tracker/
+├── scraper/                  # data ingestion package
+│   └── src/
+│       ├── index.ts          # entry: fetch → transform → insert
+│       ├── transform.ts      # Spanish API → English Reading mapping
+│       ├── migrate.ts        # CREATE TABLE + indexes
+│       ├── seed-dev.ts       # generates ~90 days of realistic mock data
+│       ├── check.ts          # quick query/inspection tool
+│       └── __tests__/
+├── dashboard/                # Next.js dashboard package
+│   └── src/
+│       ├── app/
+│       │   ├── layout.tsx     # root layout + ThemeProvider
+│       │   └── page.tsx       # main dashboard (server component)
+│       ├── components/
+│       │   ├── ui/            # shadcn/Base UI primitives
+│       │   ├── sections/      # server components that fetch + render
+│       │   └── *.tsx          # charts + client interactivity
+│       └── lib/
+│           ├── db.ts          # Turso client singleton
+│           ├── queries.ts     # SQL queries (Madrid-timezone aware)
+│           ├── cached-queries.ts  # unstable_cache wrappers
+│           └── labels.ts      # Spanish day/hour labels
+├── PLAN.md                   # original project plan (some parts aspirational)
+└── pnpm-workspace.yaml
+```
+
+## Database schema
+
+A single table — derived metrics like occupancy percentage are computed on demand.
+
+```sql
+CREATE TABLE readings (
+  id          TEXT    PRIMARY KEY,  -- UUID v4, generated in the scraper
+  timestamp   TEXT    NOT NULL,     -- ISO 8601, UTC
+  venue_id    INTEGER NOT NULL,
+  venue_name  TEXT    NOT NULL,
+  occupancy   INTEGER,              -- current head count
+  entries     INTEGER,              -- cumulative daily counter
+  exits       INTEGER,              -- cumulative daily counter
+  capacity    INTEGER
+);
+
+CREATE INDEX idx_readings_venue_ts ON readings (venue_id, timestamp);
+```
+
+Timestamps are stored in **UTC**; the dashboard converts to **Europe/Madrid** at query time (DST-aware, see `madridOffsetModifier()` in `queries.ts`).
+
+## Getting started
+
+Requires Node.js and pnpm.
+
+```bash
+pnpm install
+```
+
+### Run the dashboard against local mock data (no Turso needed)
+
+```bash
+# 1. Seed ~90 days of realistic mock data into a local SQLite file (dev.db)
+pnpm seed-dev
+
+# 2. Start the dashboard pointed at the local file
+cd dashboard && pnpm dev:mock
+# → http://localhost:3000
+```
+
+`dev:mock` sets `TURSO_URL=file:../dev.db` so the app reads the local SQLite file instead of remote Turso.
+
+### Run the scraper once (against the real gym API)
+
+Requires a `.env` at the repo root with Turso credentials:
+
+```env
+TURSO_URL=libsql://<your-db>.turso.io
+TURSO_AUTH_TOKEN=<token>
+```
+
+Then:
+
+```bash
+pnpm scrape   # one fetch + insert cycle
+```
+
+### Tests
+
+```bash
+pnpm test     # runs Vitest across both packages
+```
+
+## Environment variables
+
+| Variable           | Used by             | Notes                                                        |
+| ------------------ | ------------------- | ------------------------------------------------------------ |
+| `TURSO_URL`        | scraper + dashboard | `libsql://…` for remote, or `file:../dev.db` for local mock  |
+| `TURSO_AUTH_TOKEN` | scraper + dashboard | Not needed for the local `file:` URL                         |
+| `MOCK_NOW`         | dashboard / seed    | ISO timestamp to freeze "now" for reproducible views/tests   |
+
+The scraper reads the root `.env`; the dashboard reads `dashboard/.env.local`. Both are git-ignored, as is `dev.db`.
+
+## Deployment
+
+- **Dashboard** → Vercel (connect the repo; set `TURSO_URL` + `TURSO_AUTH_TOKEN` env vars).
+- **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso.
+
+> **Why a Raspberry Pi and not the cloud?** The gym server blocks requests from
+> datacenter IP ranges — GitHub Actions, Claude workers, and AWS all get blocked.
+> Running from a residential connection on the Pi avoids that, with no rate limits
+> observed. This is why the original GitHub Actions cron plan (in `PLAN.md`) was
+> dropped and there is no `.github/workflows/scrape.yml`.
+
+> Note: `PLAN.md` is the original design doc. A couple of pieces it describes (the
+> GitHub Actions workflow and an `app/api/readings/` route) were never built — the
+> scraper runs on the Pi, and the dashboard queries Turso directly from server
+> components. Treat the actual code as the source of truth.
+
+## License
+
+See [LICENSE](./LICENSE).

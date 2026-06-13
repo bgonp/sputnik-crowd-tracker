@@ -1,3 +1,5 @@
+// Gym occupancy API contract (request flow, field meanings, breakage checklist):
+// see ../API.md. The Spanish field names below are mapped to English on ingest.
 export interface ApiVenue {
   IdRecinto: number;
   Recinto: string;

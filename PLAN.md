@@ -21,10 +21,15 @@ Periodically scrapes occupancy data from the Sputnik Climbing gym network, store
 | Concern            | Choice                              |
 |--------------------|-------------------------------------|
 | Language           | TypeScript throughout               |
-| Scraper runtime    | GitHub Actions, cron every 5 min    |
+| Scraper runtime    | Raspberry Pi (local), every 60s     |
 | Database           | Turso (LibSQL/SQLite)               |
 | Dashboard          | Next.js App Router + shadcn/ui charts |
 | Dashboard hosting  | Vercel (free)                       |
+
+> **Why not GitHub Actions / cloud?** The original plan was a GitHub Actions cron.
+> In practice the gym server blocks requests from datacenter IP ranges (GitHub
+> Actions, Claude workers, AWS all get blocked). The scraper therefore runs
+> locally on a Raspberry Pi on a residential connection, polling every 60 seconds.
 
 ---
 
@@ -60,10 +65,9 @@ sputnik-crowd-tracker/
 │   │       └── readings/ # server route querying Turso
 │   └── components/
 │       └── charts/
-├── .github/
-│   └── workflows/
-│       └── scrape.yml    # cron: */5 * * * *
 └── pnpm-workspace.yaml
+
+# scraper is scheduled by cron/systemd on the Raspberry Pi, not in-repo
 ```
 
 ---
@@ -73,7 +77,7 @@ sputnik-crowd-tracker/
 ### Phase 1 — Database setup
 1. Create a free Turso account and database
 2. Run the `CREATE TABLE` migration
-3. Save `TURSO_URL` and `TURSO_AUTH_TOKEN` as GitHub Secrets and Vercel env vars
+3. Save `TURSO_URL` and `TURSO_AUTH_TOKEN` in the Raspberry Pi's `.env` and as Vercel env vars
 
 ### Phase 2 — Scraper
 TypeScript script using `tsx` to run directly in Actions:
@@ -83,7 +87,7 @@ TypeScript script using `tsx` to run directly in Actions:
 4. Generate a UUID per venue per reading
 5. Bulk insert all venue rows into Turso via `@libsql/client`
 
-GitHub Actions workflow: `cron: '*/5 * * * *'`, runs `pnpm scrape`.
+Scheduled on the Raspberry Pi (cron or systemd timer) to run `pnpm scrape` every 60 seconds.
 
 ### Phase 3 — Dashboard
 Next.js App Router with server components reading from Turso directly.
@@ -102,7 +106,7 @@ Next.js App Router with server components reading from Turso directly.
 - Time range slider
 
 ### Phase 4 — Deploy
-- Push to GitHub → Actions starts scraping automatically
+- Pull the repo onto the Raspberry Pi → cron/systemd runs the scraper every 60s
 - Connect repo to Vercel → dashboard live
 
 ---
