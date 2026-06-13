@@ -5,6 +5,7 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "seed-dev": "tsx src/seed-dev.ts",
+    "check-freshness": "tsx src/check-freshness.ts",
     "test": "vitest run"
   },
   "dependencies": {
