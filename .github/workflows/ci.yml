@@ -27,9 +27,6 @@ jobs:
         run: pnpm -r run test
 
       - name: Lint
-        # Non-blocking for now: 4 pre-existing lint errors. A follow-up PR will
-        # fix them and remove this line so lint becomes a hard gate.
-        continue-on-error: true
         run: pnpm --filter dashboard lint
 
       - name: Build dashboard
