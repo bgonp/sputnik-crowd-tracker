@@ -46,3 +46,4 @@ describe("evaluateFreshness", () => {
     const r = evaluateFreshness(latest, NOW, 15);
     expect(r.stale).toBe(true);
   });
+});
