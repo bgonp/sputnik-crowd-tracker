@@ -126,6 +126,15 @@ pnpm scrape   # one fetch + insert cycle
 pnpm test     # runs Vitest across both packages
 ```
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request (and on pushes to `main`):
+it installs dependencies, runs the Vitest suites, lints the dashboard, and builds
+it. Open a PR per change and let CI go green before merging.
+
+> Lint is currently **non-blocking** (`continue-on-error`) — there are a few
+> pre-existing lint errors. A follow-up PR will fix them and make lint a hard gate.
+
 ## Environment variables
 
 | Variable           | Used by             | Notes                                                        |
@@ -148,9 +157,10 @@ The scraper reads the root `.env`; the dashboard reads `dashboard/.env.local`. B
 > dropped and there is no `.github/workflows/scrape.yml`.
 
 > Note: `PLAN.md` is the original design doc. A couple of pieces it describes (the
-> GitHub Actions workflow and an `app/api/readings/` route) were never built — the
-> scraper runs on the Pi, and the dashboard queries Turso directly from server
-> components. Treat the actual code as the source of truth.
+> GitHub Actions **scraper** cron and an `app/api/readings/` route) were never built
+> — the scraper runs on the Pi, and the dashboard queries Turso directly from server
+> components. (GitHub Actions *is* used, but only for CI — see above — not scraping.)
+> Treat the actual code as the source of truth.
 
 ## License
 

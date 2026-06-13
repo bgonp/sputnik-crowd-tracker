@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local sqlite build artifact (CI build uses TURSO_URL=file:./ci.db)
+ci.db

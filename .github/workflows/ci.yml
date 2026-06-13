@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm -r run test
+
+      - name: Lint
+        # Non-blocking for now: 4 pre-existing lint errors. A follow-up PR will
+        # fix them and remove this line so lint becomes a hard gate.
+        continue-on-error: true
+        run: pnpm --filter dashboard lint
+
+      - name: Build dashboard
+        run: pnpm --filter dashboard build
+        # No real database at build time; the dashboard route is dynamic
+        # (uses searchParams), so this only needs a valid client URL so
+        # db.ts can construct without throwing. TURSO_AUTH_TOKEN is set to an
+        # explicit empty string for the file: URL — matching the dev:mock
+        # script and the scraper — so the build doesn't depend on an undefined
+        # env var.
+        env:
+          TURSO_URL: file:./ci.db
+          TURSO_AUTH_TOKEN: ""
