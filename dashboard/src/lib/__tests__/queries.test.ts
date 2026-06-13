@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ResultSet } from "@libsql/client";
 import { db } from "../db";
 import {
   getDailyAverages,
@@ -15,7 +16,7 @@ vi.mock("../db", () => ({
 }));
 
 function fakeResult(rows: Record<string, unknown>[]) {
-  return { rows } as any;
+  return { rows } as unknown as ResultSet;
 }
 
 beforeEach(() => {
