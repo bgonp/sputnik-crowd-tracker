@@ -28,9 +28,20 @@ export function evaluateFreshness(
     };
   }
 
-  const ageMinutes = Math.round(((now.getTime() - new Date(latest).getTime()) / 60_000) * 10) / 10;
-  const stale = ageMinutes > thresholdMinutes;
+  const latestMs = new Date(latest).getTime();
+  if (!Number.isFinite(latestMs)) {
+    return {
+      stale: true,
+      latest,
+      ageMinutes: null,
+      thresholdMinutes,
+      message: `STALE: latest reading timestamp "${latest}" could not be parsed as a date.`,
+    };
+  }
 
+  const rawAgeMinutes = (now.getTime() - latestMs) / 60_000;
+  const ageMinutes = Math.round(rawAgeMinutes * 10) / 10;
+  const stale = rawAgeMinutes > thresholdMinutes;
   return {
     stale,
     latest,
