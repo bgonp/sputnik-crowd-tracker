@@ -30,6 +30,16 @@ These docs are the project's source of truth for humans and agents — keep them
 
 `PLAN.md` is the original design doc — when reality diverges, fix the divergence or note it; don't silently leave it wrong. If a change makes none of these stale, no doc update is needed — don't churn docs for their own sake.
 
+## Git workflow (default for every task)
+
+Every task is done on its own branch and delivered as a PR. **Never commit directly to `main`, and never merge the PR yourself.**
+
+1. **Branch from fresh `main`:** `git switch main && git pull && git switch -c <type>/<short-kebab-desc>`. Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf` (e.g. `feat/venue-comparison`, `fix/madrid-dst-offset`).
+2. **Commit logically:** one concern per commit, imperative subject line. Group related changes; keep unrelated pre-existing changes in their own commits. End each commit message with the `Co-Authored-By` trailer.
+3. **Keep docs in sync** in the same PR (see the table above).
+4. **Finish with a PR:** `git push -u origin <branch>` then `gh pr create`. Title = concise summary; body = what changed, why, and how it was verified (tests/lint run).
+5. **Stop there.** Leave review and merge to the user — do not merge the PR.
+
 ## Local dev
 
 ```bash
