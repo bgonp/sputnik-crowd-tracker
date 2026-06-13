@@ -157,8 +157,22 @@ The scraper reads the root `.env`; the dashboard reads `dashboard/.env.local`. B
 > Note: `PLAN.md` is the original design doc. A couple of pieces it describes (the
 > GitHub Actions **scraper** cron and an `app/api/readings/` route) were never built
 > — the scraper runs on the Pi, and the dashboard queries Turso directly from server
-> components. (GitHub Actions *is* used, but only for CI — see above — not scraping.)
-> Treat the actual code as the source of truth.
+> components. (GitHub Actions *is* used, but only for CI and monitoring — see below —
+> not scraping.) Treat the actual code as the source of truth.
+
+## Monitoring
+
+`.github/workflows/freshness.yml` runs every 15 minutes and checks how old the
+newest reading in Turso is (via `pnpm --filter scraper check-freshness`). If no
+reading has landed within `FRESHNESS_THRESHOLD_MINUTES` (default 15), the job
+fails — which emails the repo owner — flagging that data collection has stalled
+(Pi down, IP block, or the gym API changed). It only reads Turso, so it runs fine
+from GitHub's runners even though scraping can't.
+
+Requires the `TURSO_URL` and `TURSO_AUTH_TOKEN` repo secrets. Run it on demand
+from the Actions tab (`workflow_dispatch`). If the gym API goes quiet overnight
+and causes false alarms, switch the cron to the daytime-only window noted in the
+workflow file.
 
 ## License
 
