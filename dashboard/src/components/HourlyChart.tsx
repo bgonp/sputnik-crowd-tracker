@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import type { Unit } from "@/components/UnitToggle";
@@ -110,7 +111,7 @@ export function HourlyChart({ data, unit, currentHour, currentPct, currentOccupa
             />
           }
         />
-        <Bar dataKey="value" shape={renderBar as any} />
+        <Bar dataKey="value" shape={renderBar as unknown as ComponentProps<typeof Bar>["shape"]} />
       </BarChart>
     </ChartContainer>
   );

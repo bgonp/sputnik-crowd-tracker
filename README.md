@@ -130,10 +130,8 @@ pnpm test     # runs Vitest across both packages
 
 `.github/workflows/ci.yml` runs on every pull request (and on pushes to `main`):
 it installs dependencies, runs the Vitest suites, lints the dashboard, and builds
-it. Open a PR per change and let CI go green before merging.
-
-> Lint is currently **non-blocking** (`continue-on-error`) — there are a few
-> pre-existing lint errors. A follow-up PR will fix them and make lint a hard gate.
+it. Open a PR per change and let CI go green before merging. All three steps —
+test, lint, and build — are required to pass.
 
 ## Environment variables
 

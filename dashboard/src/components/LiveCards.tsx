@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,12 +24,14 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
   const [pendingId, setPendingId] = useState<number | null>(null);
   const countByVenue = new Map(todayCounts.map((c) => [c.venueId, c.total]));
 
-  useEffect(() => {
-    if (!isPending) setPendingId(null);
-  }, [isPending]);
+  // While a navigation transition is in flight, optimistically treat the
+  // clicked venue as selected; otherwise the prop (URL-derived) is the source
+  // of truth. Ignoring pendingId when not pending means we don't need a
+  // setState-in-effect to reset it once the transition settles.
+  const activeId = isPending && pendingId !== null ? pendingId : selectedId;
 
   function selectVenue(venueId: number) {
-    if (venueId === (pendingId ?? selectedId)) return;
+    if (venueId === activeId) return;
     setPendingId(venueId);
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
@@ -38,13 +40,11 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
     });
   }
 
-  const effectiveSelectedId = pendingId ?? selectedId;
-
   return (
     <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
       {readings.map((r) => {
         const todayTotal = countByVenue.get(r.venueId);
-        const isSelected = r.venueId === effectiveSelectedId;
+        const isSelected = r.venueId === activeId;
         const isLoading = r.venueId === pendingId && isPending;
         return (
           <Card

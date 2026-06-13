@@ -16,6 +16,11 @@ const ICONS = {
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  // next-themes hydration guard: the theme is unknown during SSR, so we render
+  // a stable placeholder until the component has mounted on the client. This
+  // one-time mount flag is the library-recommended pattern; the lint rule's
+  // concern about cascading renders doesn't apply to a single setState.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
