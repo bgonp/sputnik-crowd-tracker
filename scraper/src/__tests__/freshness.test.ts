@@ -33,4 +33,16 @@ describe("evaluateFreshness", () => {
     expect(r.stale).toBe(false);
     expect(r.ageMinutes).toBe(15);
   });
-});
+
+  it("treats an unparseable latest timestamp as stale", () => {
+    const r = evaluateFreshness("not-a-date", NOW, 15);
+    expect(r.stale).toBe(true);
+    expect(r.ageMinutes).toBeNull();
+  });
+
+  it("does not round down a slightly-stale age below the threshold", () => {
+    // 15.04 min old (15 min + 2.4s) rounds to 15.0 if rounding is applied too early.
+    const latest = new Date(NOW.getTime() - (15 * 60_000 + 2_400)).toISOString();
+    const r = evaluateFreshness(latest, NOW, 15);
+    expect(r.stale).toBe(true);
+  });
