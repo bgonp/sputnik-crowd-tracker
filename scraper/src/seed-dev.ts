@@ -12,7 +12,7 @@ const VENUES = [
 
 const OPENING_HOUR = 7;
 const CLOSING_HOUR = 23;
-const INTERVAL_MIN = 5;
+const INTERVAL_MIN = 1; // match the production scraper's 60s cadence
 const DAYS = 90;
 const BATCH_SIZE = 500;
 
