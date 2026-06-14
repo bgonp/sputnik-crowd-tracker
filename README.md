@@ -135,7 +135,7 @@ test, lint, and build — are required to pass.
 | Variable                      | Used by             | Notes                                                              |
 | ----------------------------- | ------------------- | ------------------------------------------------------------------ |
 | `TURSO_URL`                   | scraper + dashboard | `libsql://…` for remote, or `file:../dev.db` for local mock        |
-| `TURSO_AUTH_TOKEN`            | scraper + dashboard | **read-write** for the scraper, **read-only** for the dashboard; not needed for a local `file:` URL |
+| `TURSO_AUTH_TOKEN`            | scraper + dashboard | **read-write** for the scraper, **read-only** for the dashboard; for a local `file:` URL the value is ignored, but set it empty (`TURSO_AUTH_TOKEN=`) rather than omitting it |
 | `MOCK_NOW`                    | dashboard / seed    | ISO timestamp to freeze "now" for reproducible views/tests         |
 | `FRESHNESS_THRESHOLD_MINUTES` | scraper             | Staleness threshold for `check-freshness` (default 15)             |
 
