@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts",
-    "seed-dev": "tsx src/seed-dev.ts",
-    "check-freshness": "tsx src/check-freshness.ts",
+    "start": "tsx --env-file-if-exists=.env src/index.ts",
+    "seed-dev": "tsx --env-file-if-exists=.env src/seed-dev.ts",
+    "check-freshness": "tsx --env-file-if-exists=.env src/check-freshness.ts",
     "test": "vitest run"
   },
   "dependencies": {
