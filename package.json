@@ -1,9 +1,11 @@
 {
   "name": "sputnik-crowd-tracker",
   "private": true,
+  "packageManager": "pnpm@11.5.2",
   "scripts": {
     "scrape": "pnpm --filter scraper start",
     "seed-dev": "pnpm --filter scraper seed-dev",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck"
   }
 }

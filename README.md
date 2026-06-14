@@ -127,9 +127,11 @@ pnpm test     # runs Vitest across both packages
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every pull request (and on pushes to `main`):
-it installs dependencies, runs the Vitest suites, lints the dashboard, and builds
-it. Open a PR per change and let CI go green before merging. All three steps —
-test, lint, and build — are required to pass.
+it installs dependencies, runs the Vitest suites, type-checks both packages
+(`tsc --noEmit`), lints the dashboard, and builds it. Open a PR per change and let
+CI go green before merging — test, typecheck, lint, and build are all required to
+pass. (`tsc` matters because the scraper runs under `tsx`, which skips type
+checking.)
 
 ## Environment variables
 
