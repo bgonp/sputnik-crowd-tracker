@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client";
+import { createDbClient } from "./db.js";
 import { evaluateFreshness, DEFAULT_THRESHOLD_MINUTES } from "./freshness.js";
 
 async function run(): Promise<void> {
@@ -10,12 +10,7 @@ async function run(): Promise<void> {
     );
   }
 
-  const url = process.env["TURSO_URL"];
-  const authToken = process.env["TURSO_AUTH_TOKEN"];
-  if (!url) throw new Error("Missing TURSO_URL env var");
-  if (authToken === undefined) throw new Error("Missing TURSO_AUTH_TOKEN env var");
-
-  const client = createClient({ url, authToken });
+  const client = createDbClient();
 
   const result = await client.execute("SELECT MAX(timestamp) AS latest FROM readings");
   const latest = (result.rows[0]?.["latest"] as string | null | undefined) ?? null;

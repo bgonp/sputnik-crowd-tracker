@@ -1,9 +1,6 @@
-import { createClient } from "@libsql/client";
+import { createDbClient } from "./db.js";
 
-const client = createClient({
-  url: process.env["TURSO_URL"] ?? "",
-  authToken: process.env["TURSO_AUTH_TOKEN"] ?? "",
-});
+const client = createDbClient();
 
 await client.execute(`
   CREATE TABLE IF NOT EXISTS readings (

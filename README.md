@@ -40,6 +40,7 @@ sputnik-crowd-tracker/
 ├── scraper/                  # data ingestion package
 │   └── src/
 │       ├── index.ts          # entry: fetch → transform → insert
+│       ├── db.ts             # Turso client factory (URL-aware token validation)
 │       ├── transform.ts      # Spanish API → English Reading mapping
 │       ├── migrate.ts        # CREATE TABLE + indexes
 │       ├── seed-dev.ts       # generates ~90 days of realistic mock data
