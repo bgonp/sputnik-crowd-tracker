@@ -107,14 +107,10 @@ cd dashboard && pnpm dev:mock
 
 ### Run the scraper once (against the real gym API)
 
-Requires a `.env` at the repo root with Turso credentials:
-
-```env
-TURSO_URL=libsql://<your-db>.turso.io
-TURSO_AUTH_TOKEN=<token>
-```
-
-Then:
+Copy `scraper/.env.example` to `scraper/.env` and fill in your Turso credentials
+(use a **read-write** token — the scraper is the only writer). The scraper scripts
+load this file automatically (`--env-file-if-exists=.env`), falling back to the
+ambient environment when it's absent (as on the Pi and in CI).
 
 ```bash
 pnpm scrape   # one fetch + insert cycle
@@ -135,13 +131,23 @@ test, lint, and build — are required to pass.
 
 ## Environment variables
 
-| Variable           | Used by             | Notes                                                        |
-| ------------------ | ------------------- | ------------------------------------------------------------ |
-| `TURSO_URL`        | scraper + dashboard | `libsql://…` for remote, or `file:../dev.db` for local mock  |
-| `TURSO_AUTH_TOKEN` | scraper + dashboard | Not needed for the local `file:` URL                         |
-| `MOCK_NOW`         | dashboard / seed    | ISO timestamp to freeze "now" for reproducible views/tests   |
+| Variable                      | Used by             | Notes                                                              |
+| ----------------------------- | ------------------- | ------------------------------------------------------------------ |
+| `TURSO_URL`                   | scraper + dashboard | `libsql://…` for remote, or `file:../dev.db` for local mock        |
+| `TURSO_AUTH_TOKEN`            | scraper + dashboard | **read-write** for the scraper, **read-only** for the dashboard; not needed for a local `file:` URL |
+| `MOCK_NOW`                    | dashboard / seed    | ISO timestamp to freeze "now" for reproducible views/tests         |
+| `FRESHNESS_THRESHOLD_MINUTES` | scraper             | Staleness threshold for `check-freshness` (default 15)             |
 
-The scraper reads the root `.env`; the dashboard reads `dashboard/.env.local`. Both are git-ignored, as is `dev.db`.
+Each package keeps its own git-ignored env file — `scraper/.env` and
+`dashboard/.env.local` (templates: `scraper/.env.example`, `dashboard/.env.example`).
+The `TURSO_URL` is the same in both; the tokens differ by privilege.
+
+**Least privilege:** the scraper is the only writer, so give it a **read-write**
+token; the dashboard and the freshness monitor only read, so use a **read-only**
+token there (`turso db tokens create <db> --read-only`). In production these come
+from the host environment, not the files above: Vercel env (dashboard, read-only),
+the Pi's service environment (scraper, read-write), and the `TURSO_AUTH_TOKEN` repo
+secret (freshness Action, read-only).
 
 ## Deployment
 
@@ -169,7 +175,8 @@ fails — which emails the repo owner — flagging that data collection has stal
 (Pi down, IP block, or the gym API changed). It only reads Turso, so it runs fine
 from GitHub's runners even though scraping can't.
 
-Requires the `TURSO_URL` and `TURSO_AUTH_TOKEN` repo secrets. Run it on demand
+Requires the `TURSO_URL` and `TURSO_AUTH_TOKEN` repo secrets (a read-only token
+is sufficient — it only reads). Run it on demand
 from the Actions tab (`workflow_dispatch`). If the gym API goes quiet overnight
 and causes false alarms, switch the cron to the daytime-only window noted in the
 workflow file.
