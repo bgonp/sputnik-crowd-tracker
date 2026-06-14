@@ -11,9 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm version comes from the "packageManager" field in package.json
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
@@ -28,6 +27,9 @@ jobs:
 
       - name: Lint
         run: pnpm --filter dashboard lint
+
+      - name: Typecheck
+        run: pnpm -r run typecheck
 
       - name: Build dashboard
         run: pnpm --filter dashboard build
