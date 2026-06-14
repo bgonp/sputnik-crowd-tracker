@@ -5,7 +5,6 @@
   "scripts": {
     "start": "tsx --env-file-if-exists=.env src/index.ts",
     "seed-dev": "tsx --env-file-if-exists=.env src/seed-dev.ts",
-    "check": "tsx --env-file-if-exists=.env src/check.ts",
     "check-freshness": "tsx --env-file-if-exists=.env src/check-freshness.ts",
     "test": "vitest run"
   },

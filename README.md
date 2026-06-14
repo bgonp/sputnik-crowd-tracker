@@ -43,7 +43,8 @@ sputnik-crowd-tracker/
 │       ├── transform.ts      # Spanish API → English Reading mapping
 │       ├── migrate.ts        # CREATE TABLE + indexes
 │       ├── seed-dev.ts       # generates ~90 days of realistic mock data
-│       ├── check.ts          # quick query/inspection tool
+│       ├── freshness.ts      # pure staleness evaluation
+│       ├── check-freshness.ts # CLI: alert if no recent readings (freshness monitor)
 │       └── __tests__/
 ├── dashboard/                # Next.js dashboard package
 │   └── src/
