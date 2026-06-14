@@ -29,21 +29,21 @@ describe("toReadings", () => {
 
   it("assigns a UUID v4 to each reading", () => {
     const [result] = toReadings([venue()], TS);
-    expect(result.id).toMatch(
+    expect(result!.id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
 
   it("assigns unique IDs to each reading", () => {
     const results = toReadings([venue({ IdRecinto: 1 }), venue({ IdRecinto: 2 })], TS);
-    expect(results[0].id).not.toBe(results[1].id);
+    expect(results[0]!.id).not.toBe(results[1]!.id);
   });
 
   it("filters out venues with zero capacity", () => {
     const venues = [venue({ IdRecinto: 1 }), venue({ IdRecinto: 2, Aforo: 0 })];
     const results = toReadings(venues, TS);
     expect(results).toHaveLength(1);
-    expect(results[0].venueId).toBe(1);
+    expect(results[0]!.venueId).toBe(1);
   });
 
   it("propagates the timestamp to all readings", () => {

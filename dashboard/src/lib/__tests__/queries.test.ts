@@ -91,7 +91,7 @@ describe("getHourlyAverages", () => {
   it("filters out pre-opening hours in SQL", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
     await getHourlyAverages([1]);
-    const { sql } = vi.mocked(db.execute).mock.calls[0][0] as { sql: string };
+    const { sql } = vi.mocked(db.execute).mock.calls[0][0] as unknown as { sql: string };
     expect(sql).toMatch(/HAVING hour >= 7/i);
   });
 });
@@ -127,7 +127,7 @@ describe("getHeatmap", () => {
   it("filters out pre-opening hours in SQL", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
     await getHeatmap([1]);
-    const { sql } = vi.mocked(db.execute).mock.calls[0][0] as { sql: string };
+    const { sql } = vi.mocked(db.execute).mock.calls[0][0] as unknown as { sql: string };
     expect(sql).toMatch(/HAVING hour >= 7/i);
   });
 });
