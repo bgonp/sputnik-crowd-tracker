@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client";
+import { createDbClient } from "./db.js";
 import { toReadings, type Reading } from "./transform.js";
 
 const GYM_URL = "https://sputnikclimbing.deporsite.net/aforo-guindalera";
@@ -85,10 +85,7 @@ async function fetchOccupancy(csrf: string, cookie: string): Promise<ApiVenue[]>
 
 
 async function insertReadings(readings: Reading[]): Promise<void> {
-  const client = createClient({
-    url: process.env["TURSO_URL"] ?? "",
-    authToken: process.env["TURSO_AUTH_TOKEN"] ?? "",
-  });
+  const client = createDbClient();
 
   await client.batch(
     readings.map((r) => ({
