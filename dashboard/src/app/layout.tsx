@@ -3,8 +3,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sputnik Crowd Tracker",
-  description: "Seguimiento histórico del aforo de los gimnasios Sputnik Climbing",
+  title: "Aforo de Sputnik Climbing | Rocódromos en tiempo real",
+  description: "Seguimiento histórico del aforo de los rocódromos Sputnik Climbing",
 };
 
 export default function RootLayout({
