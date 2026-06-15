@@ -47,6 +47,7 @@ pnpm test                     # Vitest across both packages
 ## Working agreement
 
 - **Git:** work on a branch per task (`type/kebab-desc`), make logical commits, then push and open a PR at the end — never commit to `main` or merge the PR yourself. See `CLAUDE.md` → "Git workflow" for the full flow.
+- **The task isn't done until CI is green.** After opening the PR, watch its checks (`gh pr checks <n> --watch`); if a check fails, read the logs (`gh run view <run-id> --log-failed`), fix it, and push until everything passes. CI builds against an empty DB and a clean install, so a green local run doesn't guarantee a green CI run.
 - When you add a query, add it to `queries.ts`, write a Vitest test for it, and expose it through `cached-queries.ts` with an appropriate revalidation window.
 - Match the surrounding code's style and altitude.
 - Mention any new env vars and update `README.md` if you change setup, scripts, or env.
