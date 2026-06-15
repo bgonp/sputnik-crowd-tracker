@@ -39,7 +39,8 @@ Every task is done on its own branch and delivered as a PR. **Never commit direc
 3. **Keep docs in sync** in the same PR (see the table above).
 4. **Finish with a PR:** `git push -u origin <branch>` then `gh pr create`. Title = concise summary; body = what changed, why, and how it was verified (tests/lint run).
 5. **Wait for CI to pass before considering the task done.** After pushing, watch the PR's checks (`gh pr checks <n> --watch`, or poll `gh pr checks <n>`). The task is **not** done while CI is failing — read the failing job's logs (`gh run view <run-id> --log-failed`), fix the cause, and push again until every check is green. A local build/test pass is not a substitute: CI builds against an empty database and a clean install, so it catches things local runs miss.
-6. **Stop there.** Leave review and merge to the user — do not merge the PR.
+6. **Wait for GitHub Copilot's review and address it.** Copilot auto-reviews PRs here. Give it a moment after pushing, then read its comments (`gh pr view <n> --comments`, and `gh api repos/{owner}/{repo}/pulls/<n>/comments` for inline review threads). The task is **not** done while Copilot has open feedback — for each actionable comment, either fix it and push, or reply explaining why it doesn't apply; ignore only clearly spurious ones, and say so. Copilot re-reviews after each push, so repeat until it has nothing actionable left.
+7. **Stop there.** Leave review and merge to the user — do not merge the PR.
 
 ## Local dev
 
