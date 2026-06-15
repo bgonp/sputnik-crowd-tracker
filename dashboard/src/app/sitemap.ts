@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl();
-  const lastModified = new Date();
 
   // Degrade gracefully to a home-only sitemap if the venue list can't be
   // fetched (e.g. Turso briefly unavailable) rather than 500-ing the route.
@@ -21,11 +20,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     venues = [];
   }
 
+  // No `lastModified`: this route renders per request, so a `new Date()` here
+  // would churn the timestamp on every fetch and signal false updates to
+  // crawlers. The set of URLs is what matters; `changeFrequency` covers freshness.
   return [
-    { url: base, lastModified, changeFrequency: "hourly", priority: 1 },
+    { url: base, changeFrequency: "hourly", priority: 1 },
     ...venues.map((v) => ({
       url: `${base}/?venue=${v.id}`,
-      lastModified,
       changeFrequency: "hourly" as const,
       priority: 0.8,
     })),

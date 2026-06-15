@@ -12,7 +12,12 @@
  */
 export function getSiteUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit) return explicit.replace(/\/+$/, "");
+  if (explicit) {
+    const trimmed = explicit.replace(/\/+$/, "");
+    // Tolerate a scheme-less value like "example.com" so `new URL(getSiteUrl())`
+    // in the metadata layer doesn't throw an opaque TypeError.
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  }
 
   const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   if (vercel) return `https://${vercel}`;
