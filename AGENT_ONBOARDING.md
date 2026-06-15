@@ -48,6 +48,7 @@ pnpm test                     # Vitest across both packages
 
 - **Git:** work on a branch per task (`type/kebab-desc`), make logical commits, then push and open a PR at the end — never commit to `main` or merge the PR yourself. See `CLAUDE.md` → "Git workflow" for the full flow.
 - **The task isn't done until CI is green.** After opening the PR, watch its checks (`gh pr checks <n> --watch`); if a check fails, read the logs (`gh run view <run-id> --log-failed`), fix it, and push until everything passes. CI builds against an empty DB and a clean install, so a green local run doesn't guarantee a green CI run.
+- **The task isn't done until GitHub Copilot's review is addressed.** Copilot auto-reviews a PR once when it's opened. Read its comments (`gh pr view <n> --comments`; inline threads via `gh api repos/{owner}/{repo}/pulls/<n>/comments`) and either fix each actionable point and push, or reply explaining why it doesn't apply. It does **not** re-review on push — after fixing, re-request it explicitly (`gh api --method POST repos/{owner}/{repo}/pulls/<n>/requested_reviewers -f 'reviewers[]=Copilot'`). It only re-posts when it finds something new, so no new review within a few minutes means nothing further to flag. Repeat until clean.
 - When you add a query, add it to `queries.ts`, write a Vitest test for it, and expose it through `cached-queries.ts` with an appropriate revalidation window.
 - Match the surrounding code's style and altitude.
 - Mention any new env vars and update `README.md` if you change setup, scripts, or env.
