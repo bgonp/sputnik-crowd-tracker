@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
@@ -19,6 +20,32 @@ export const revalidate = 60;
 
 interface Props {
   searchParams: Promise<{ venue?: string; unit?: string }>;
+}
+
+const shortVenueName = (name: string) => name.replace(" Principal", "");
+
+// Give each venue its own indexable title/description and canonical URL.
+// Without a `?venue=` param we inherit the generic metadata from the layout.
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { venue } = await searchParams;
+  if (!venue) return {};
+
+  const venues = await getCachedVenues();
+  const selected = venues.find((v) => v.id === parseInt(venue, 10));
+  if (!selected) return {};
+
+  const name = shortVenueName(selected.name);
+  const title = `Aforo del rocódromo Sputnik ${name} en tiempo real`;
+  const description = `Consulta el aforo en tiempo real, el histórico de ocupación y las mejores horas para visitar el rocódromo Sputnik ${name}.`;
+  const canonical = `/?venue=${selected.id}`;
+
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical },
+    twitter: { title, description },
+  };
 }
 
 export default async function Home({ searchParams }: Props) {
@@ -50,8 +77,8 @@ export default async function Home({ searchParams }: Props) {
 
   const thirtyDaysAgo = new Date(roundedNow.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const selectedVenueName =
-    venues.find((v) => v.id === selectedVenueId)?.name.replace(" Principal", "") ?? "";
+  const selectedVenue = venues.find((v) => v.id === selectedVenueId);
+  const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">

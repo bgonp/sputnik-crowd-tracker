@@ -139,6 +139,7 @@ green before merging — test, lint, typecheck, and build are all required to pa
 | `TURSO_URL`                   | scraper + dashboard | `libsql://…` for remote, or `file:../dev.db` for local mock        |
 | `TURSO_AUTH_TOKEN`            | scraper + dashboard | **read-write** for the scraper, **read-only** for the dashboard; for a local `file:` URL the value is ignored, but set it empty (`TURSO_AUTH_TOKEN=`) rather than omitting it |
 | `MOCK_NOW`                    | dashboard / seed    | ISO timestamp to freeze "now" for reproducible views/tests         |
+| `NEXT_PUBLIC_SITE_URL`        | dashboard           | Public base URL for canonical links, Open Graph, sitemap & robots; falls back to Vercel's production URL, then `http://localhost:3000` |
 | `FRESHNESS_THRESHOLD_MINUTES` | scraper             | Staleness threshold for `check-freshness` (default 15)             |
 
 Each package keeps its own git-ignored env file — `scraper/.env` and
