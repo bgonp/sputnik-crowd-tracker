@@ -38,7 +38,8 @@ Every task is done on its own branch and delivered as a PR. **Never commit direc
 2. **Commit logically:** one concern per commit, imperative subject line. Group related changes; keep unrelated pre-existing changes in their own commits. End each commit message with the `Co-Authored-By` trailer.
 3. **Keep docs in sync** in the same PR (see the table above).
 4. **Finish with a PR:** `git push -u origin <branch>` then `gh pr create`. Title = concise summary; body = what changed, why, and how it was verified (tests/lint run).
-5. **Stop there.** Leave review and merge to the user — do not merge the PR.
+5. **Wait for CI to pass before considering the task done.** After pushing, watch the PR's checks (`gh pr checks <n> --watch`, or poll `gh pr checks <n>`). The task is **not** done while CI is failing — read the failing job's logs (`gh run view <run-id> --log-failed`), fix the cause, and push again until every check is green. A local build/test pass is not a substitute: CI builds against an empty database and a clean install, so it catches things local runs miss.
+6. **Stop there.** Leave review and merge to the user — do not merge the PR.
 
 ## Local dev
 
