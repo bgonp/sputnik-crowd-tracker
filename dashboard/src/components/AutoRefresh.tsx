@@ -14,6 +14,8 @@ export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
     const isActive = () =>
       document.visibilityState === "visible" && document.hasFocus();
 
+    let active = isActive();
+
     const stop = () => {
       if (id !== undefined) {
         clearInterval(id);
@@ -28,7 +30,13 @@ export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
     };
 
     const sync = () => {
-      if (isActive()) {
+      const nowActive = isActive();
+      // Returning to a tab fires both `visibilitychange` and `focus`; only act
+      // on a real transition so we don't refresh twice back-to-back.
+      if (nowActive === active) return;
+      active = nowActive;
+
+      if (nowActive) {
         router.refresh(); // pull fresh data the moment the tab becomes active again
         start();
       } else {
@@ -36,7 +44,7 @@ export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
       }
     };
 
-    if (isActive()) start();
+    if (active) start();
     document.addEventListener("visibilitychange", sync);
     window.addEventListener("focus", sync);
     window.addEventListener("blur", sync);
