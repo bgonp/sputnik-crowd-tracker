@@ -51,8 +51,9 @@ sputnik-crowd-tracker/
 ├── dashboard/                # Next.js dashboard package
 │   └── src/
 │       ├── app/
-│       │   ├── layout.tsx     # root layout + ThemeProvider
-│       │   └── page.tsx       # main dashboard (server component)
+│       │   ├── layout.tsx          # root layout + ThemeProvider
+│       │   └── [[...venue]]/
+│       │       └── page.tsx        # main dashboard at /<venue-slug> (server component)
 │       ├── components/
 │       │   ├── ui/            # shadcn/Base UI primitives
 │       │   ├── sections/      # server components that fetch + render
@@ -61,6 +62,7 @@ sputnik-crowd-tracker/
 │           ├── db.ts          # Turso client singleton
 │           ├── queries.ts     # SQL queries (Madrid-timezone aware)
 │           ├── cached-queries.ts  # unstable_cache wrappers
+│           ├── venues.ts      # venue name → URL slug helpers
 │           └── labels.ts      # Spanish day/hour labels
 ├── PLAN.md                   # original project plan (some parts aspirational)
 └── pnpm-workspace.yaml

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
@@ -13,29 +14,35 @@ import {
   getCachedLiveReadings,
   getCachedTodayVisitorCounts,
 } from "@/lib/cached-queries";
+import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 
 export const revalidate = 60;
 
 interface Props {
+  // Optional catch-all: `/` → undefined, `/<slug>` → [slug].
+  params: Promise<{ venue?: string[] }>;
   searchParams: Promise<{ venue?: string; unit?: string }>;
 }
 
-const shortVenueName = (name: string) => name.replace(" Principal", "");
+// Append the unit only when it's the non-default value, to keep URLs clean.
+const withUnit = (path: string, unit?: string) =>
+  unit === "absolute" ? `${path}?unit=absolute` : path;
 
 // Give each venue its own indexable title/description and canonical URL.
-// Without a `?venue=` param we inherit the generic metadata from the layout.
-export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const { venue } = await searchParams;
-  if (!venue) return {};
+// The root (no slug) redirects, so it has no metadata of its own here and
+// falls back to the generic tags from the layout.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { venue: segments } = await params;
+  if (!segments || segments.length !== 1) return {};
 
   const venues = await getCachedVenues();
-  const selected = venues.find((v) => v.id === parseInt(venue, 10));
+  const selected = findVenueBySlug(venues, segments[0]);
   if (!selected) return {};
 
   const name = shortVenueName(selected.name);
   const title = `Aforo del rocódromo Sputnik ${name} en tiempo real`;
   const description = `Consulta el aforo en tiempo real, el histórico de ocupación y las mejores horas para visitar el rocódromo Sputnik ${name}.`;
-  const canonical = `/?venue=${selected.id}`;
+  const canonical = `/${venueSlug(selected.name)}`;
 
   return {
     title: { absolute: title },
@@ -46,23 +53,41 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   };
 }
 
-export default async function Home({ searchParams }: Props) {
-  const { venue, unit: unitParam } = await searchParams;
+export default async function Home({ params, searchParams }: Props) {
+  const { venue: segments } = await params;
+  const { venue: legacyVenueId, unit: unitParam } = await searchParams;
   const unit: Unit = unitParam === "absolute" ? "absolute" : "percentage";
+
+  const venues = await getCachedVenues();
+
+  // Root URL: there's no venue in the path. Send legacy `/?venue=<id>` links
+  // (still in the wild from the old query-param scheme) to their slug path, and
+  // the bare domain to the default venue. Both are 308s so crawlers update.
+  if (!segments || segments.length === 0) {
+    const legacyVenue = legacyVenueId
+      ? venues.find((v) => v.id === parseInt(legacyVenueId, 10))
+      : undefined;
+    const target = legacyVenue ?? venues[0];
+    if (!target) notFound(); // empty DB — nothing to redirect to
+    permanentRedirect(withUnit(`/${venueSlug(target.name)}`, unitParam));
+  }
+
+  // Anything deeper than a single segment isn't a venue.
+  if (segments.length > 1) notFound();
+  const selectedVenue = findVenueBySlug(venues, segments[0]);
+  if (!selectedVenue) notFound();
+
+  const selectedVenueId = selectedVenue.id;
 
   const now = process.env.MOCK_NOW ? new Date(process.env.MOCK_NOW) : new Date();
   // Round to 1-minute intervals so requests arriving milliseconds apart share a cache entry
   const roundedNow = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
   const roundedNowIso = roundedNow.toISOString();
 
-  const [venues, liveReadings, todayVisitorCounts] = await Promise.all([
-    getCachedVenues(),
+  const [liveReadings, todayVisitorCounts] = await Promise.all([
     getCachedLiveReadings(),
     getCachedTodayVisitorCounts(roundedNowIso),
   ]);
-
-  const defaultVenueId = venues[0]?.id ?? 1;
-  const selectedVenueId = venue ? parseInt(venue, 10) : defaultVenueId;
 
   const currentReading = liveReadings.find((r) => r.venueId === selectedVenueId);
   const madridHour = parseInt(
@@ -73,8 +98,7 @@ export default async function Home({ searchParams }: Props) {
     }).format(now)
   );
 
-  const selectedVenue = venues.find((v) => v.id === selectedVenueId);
-  const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
+  const selectedVenueName = shortVenueName(selectedVenue.name);
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">

@@ -14,7 +14,7 @@ A scraper polls the gym's public occupancy API every 60 seconds and stores one r
 
 1. **`scraper/`** — a `tsx` CLI. `src/index.ts` fetches the gym page for a CSRF token + cookie, POSTs to the occupancy endpoint, maps the **Spanish API fields to English** in `src/transform.ts`, and batch-inserts into the DB. Runs on a Raspberry Pi via cron/systemd every 60s (not in the cloud — the gym server blocks datacenter IPs). `seed-dev.ts` generates ~90 days of realistic mock data for local dev.
 2. **Database** — Turso (LibSQL/SQLite). Single table `readings(id, timestamp, venue_id, venue_name, occupancy, entries, exits, capacity)`. Derived metrics (e.g. occupancy %) are computed in SQL, not stored.
-3. **`dashboard/`** — Next.js 16 App Router, React 19. Server components in `src/components/sections/` fetch data via `src/lib/cached-queries.ts` (which wrap `src/lib/queries.ts` in `unstable_cache`). There is **no data API route** — server components query Turso directly. Minimal client components handle interactivity (venue selector, theme toggle, unit toggle, 60s auto-refresh). SEO/metadata lives in the App Router metadata layer: per-venue titles via `generateMetadata` in `app/page.tsx`, site-wide tags in `app/layout.tsx`, plus `app/robots.ts`, `app/sitemap.ts`, and a generated `app/opengraph-image.tsx`; all resolve the public base URL through `src/lib/site.ts` (`NEXT_PUBLIC_SITE_URL`).
+3. **`dashboard/`** — Next.js 16 App Router, React 19. Server components in `src/components/sections/` fetch data via `src/lib/cached-queries.ts` (which wrap `src/lib/queries.ts` in `unstable_cache`). There is **no data API route** — server components query Turso directly. Minimal client components handle interactivity (venue selector, theme toggle, unit toggle, 60s auto-refresh). Each venue has its own path — `/<venue-slug>` (e.g. `/las-rozas`), served by the optional catch-all route `app/[[...venue]]/page.tsx`; the bare domain 308-redirects to the default venue, and legacy `/?venue=<id>` links redirect to their slug path. Slugs are derived from venue names by `src/lib/venues.ts`. SEO/metadata lives in the App Router metadata layer: per-venue titles via `generateMetadata` in `app/[[...venue]]/page.tsx`, site-wide tags in `app/layout.tsx`, plus `app/robots.ts`, `app/sitemap.ts`, and a generated `app/opengraph-image.tsx`; all resolve the public base URL through `src/lib/site.ts` (`NEXT_PUBLIC_SITE_URL`).
 
 ## Conventions you MUST follow
 
@@ -41,7 +41,7 @@ pnpm test                     # Vitest across both packages
 - `scraper/src/index.ts` and `transform.ts` — ingestion + the Spanish→English mapping.
 - `dashboard/src/lib/queries.ts` — all SQL, the timezone handling, the metric definitions.
 - `dashboard/src/lib/cached-queries.ts` — caching layer.
-- `dashboard/src/app/page.tsx` — how sections and search params (`?venue=`, `?unit=`) compose the dashboard.
+- `dashboard/src/app/[[...venue]]/page.tsx` — how sections, the `/<venue-slug>` route param, and the `?unit=` search param compose the dashboard.
 - `PLAN.md` — original design intent. **Caveat:** parts are aspirational (the GitHub Actions cron and an `api/readings/` route were never built). Trust the code over the plan.
 
 ## Working agreement

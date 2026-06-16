@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getCachedVenues } from "@/lib/cached-queries";
 import { getSiteUrl } from "@/lib/site";
+import { venueSlug } from "@/lib/venues";
 
 // Render at request time rather than prerendering at build. The venue list
 // comes from the DB, and the build runs without one (CI uses an empty `file:`
@@ -20,15 +21,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     venues = [];
   }
 
+  // The bare domain 308-redirects to the first venue, so we list the venue
+  // slug paths directly (the canonical URLs) rather than the redirecting root.
+  // The first venue is the default landing, so it gets top priority.
+  if (venues.length === 0) {
+    return [{ url: base, changeFrequency: "hourly", priority: 1 }];
+  }
+
   // No `lastModified`: this route renders per request, so a `new Date()` here
   // would churn the timestamp on every fetch and signal false updates to
   // crawlers. The set of URLs is what matters; `changeFrequency` covers freshness.
-  return [
-    { url: base, changeFrequency: "hourly", priority: 1 },
-    ...venues.map((v) => ({
-      url: `${base}/?venue=${v.id}`,
-      changeFrequency: "hourly" as const,
-      priority: 0.8,
-    })),
-  ];
+  return venues.map((v, i) => ({
+    url: `${base}/${venueSlug(v.name)}`,
+    changeFrequency: "hourly" as const,
+    priority: i === 0 ? 1 : 0.8,
+  }));
 }
