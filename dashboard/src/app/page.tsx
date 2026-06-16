@@ -98,37 +98,39 @@ export default async function Home({ searchParams }: Props) {
         </Suspense>
       </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Mapa de calor — {selectedVenueName}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<ChartSkeleton className="h-48" />}>
-            <HeatmapSection venueId={selectedVenueId} />
-          </Suspense>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
-            <Suspense>
-              <UnitToggle unit={unit} />
+      <div className="grid gap-8 xl:grid-cols-2 items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Mapa de calor — {selectedVenueName}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Suspense fallback={<ChartSkeleton className="h-48" />}>
+              <HeatmapSection venueId={selectedVenueId} />
             </Suspense>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<ChartSkeleton />}>
-            <HourlySection
-              venueId={selectedVenueId}
-              unit={unit}
-              currentHour={madridHour}
-              currentReading={currentReading}
-            />
-          </Suspense>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
+              <Suspense>
+                <UnitToggle unit={unit} />
+              </Suspense>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Suspense fallback={<ChartSkeleton />}>
+              <HourlySection
+                venueId={selectedVenueId}
+                unit={unit}
+                currentHour={madridHour}
+                currentReading={currentReading}
+              />
+            </Suspense>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }
