@@ -12,8 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl();
 
-  // Degrade gracefully to a home-only sitemap if the venue list can't be
-  // fetched (e.g. Turso briefly unavailable) rather than 500-ing the route.
+  // Degrade gracefully to an empty sitemap if the venue list can't be fetched
+  // (e.g. Turso briefly unavailable) rather than 500-ing the route. We don't
+  // emit the bare domain here: with no venues it either 308-redirects or 404s,
+  // so listing it would advertise a non-canonical / broken URL to crawlers.
   let venues: Awaited<ReturnType<typeof getCachedVenues>> = [];
   try {
     venues = await getCachedVenues();
@@ -24,9 +26,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // The bare domain 308-redirects to the first venue, so we list the venue
   // slug paths directly (the canonical URLs) rather than the redirecting root.
   // The first venue is the default landing, so it gets top priority.
-  if (venues.length === 0) {
-    return [{ url: base, changeFrequency: "hourly", priority: 1 }];
-  }
 
   // No `lastModified`: this route renders per request, so a `new Date()` here
   // would churn the timestamp on every fetch and signal false updates to

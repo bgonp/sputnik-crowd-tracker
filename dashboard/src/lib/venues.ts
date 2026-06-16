@@ -2,7 +2,7 @@ import type { Venue } from "./queries";
 
 /** Drop the " Principal" suffix the gym API appends to every venue name. */
 export function shortVenueName(name: string): string {
-  return name.replace(" Principal", "");
+  return name.replace(/ Principal$/, "");
 }
 
 /**
