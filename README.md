@@ -32,6 +32,7 @@ The dataset is built incrementally — every reading is a snapshot of how full e
 | Theming           | next-themes (dark/light)                            |
 | Tests             | Vitest                                              |
 | Dashboard hosting | Vercel                                              |
+| Analytics         | Vercel Web Analytics (`@vercel/analytics`)          |
 
 ## Repository layout
 
@@ -157,6 +158,7 @@ secret (freshness Action, read-only).
 
 - **Dashboard** → Vercel (connect the repo; set `TURSO_URL` + `TURSO_AUTH_TOKEN` env vars).
 - **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso.
+- **Visitor analytics** → [Vercel Web Analytics](https://vercel.com/docs/analytics) is wired in via the `<Analytics />` component in `dashboard/src/app/layout.tsx`. It's cookieless (no consent banner required) and needs no env vars — just enable Web Analytics for the project in the Vercel dashboard.
 
 > **Why a Raspberry Pi and not the cloud?** The gym server blocks requests from
 > datacenter IP ranges — GitHub Actions, Claude workers, and AWS all get blocked.
