@@ -94,9 +94,9 @@ Next.js App Router with server components reading from Turso directly.
 
 **Charts:**
 - Heatmap — day of week × hour, colored by average occupancy % (core "best time to go" view)
-- Line chart — occupancy over a selected date range, one line per selected venue
+- Line chart — occupancy over a selected date range, one line per selected venue _(temporarily removed to reduce Turso reads; full-history scan was the heaviest read driver — revisit later)_
 - Bar chart — average occupancy by hour of day
-- Bar chart — average occupancy by day of week
+- Bar chart — average occupancy by day of week _(temporarily removed to reduce Turso reads — revisit later)_
 - Live view — latest reading per venue (current status)
 
 **Filters:**

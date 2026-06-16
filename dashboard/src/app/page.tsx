@@ -4,9 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
 import { HeatmapSection } from "@/components/sections/HeatmapSection";
-import { TimeSeriesSection } from "@/components/sections/TimeSeriesSection";
 import { HourlySection } from "@/components/sections/HourlySection";
-import { DailySection } from "@/components/sections/DailySection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
@@ -75,8 +73,6 @@ export default async function Home({ searchParams }: Props) {
     }).format(now)
   );
 
-  const thirtyDaysAgo = new Date(roundedNow.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
   const selectedVenue = venues.find((v) => v.id === selectedVenueId);
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
 
@@ -116,9 +112,7 @@ export default async function Home({ searchParams }: Props) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">
-              Evolución del aforo — {selectedVenueName} (últimos 30 días)
-            </CardTitle>
+            <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
             <Suspense>
               <UnitToggle unit={unit} />
             </Suspense>
@@ -126,49 +120,15 @@ export default async function Home({ searchParams }: Props) {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<ChartSkeleton />}>
-            <TimeSeriesSection venueId={selectedVenueId} unit={unit} from={thirtyDaysAgo} to={roundedNowIso} />
+            <HourlySection
+              venueId={selectedVenueId}
+              unit={unit}
+              currentHour={madridHour}
+              currentReading={currentReading}
+            />
           </Suspense>
         </CardContent>
       </Card>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
-              <Suspense>
-                <UnitToggle unit={unit} />
-              </Suspense>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Suspense fallback={<ChartSkeleton />}>
-              <HourlySection
-                venueId={selectedVenueId}
-                unit={unit}
-                currentHour={madridHour}
-                currentReading={currentReading}
-              />
-            </Suspense>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Media por día — {selectedVenueName}</CardTitle>
-              <Suspense>
-                <UnitToggle unit={unit} />
-              </Suspense>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Suspense fallback={<ChartSkeleton />}>
-              <DailySection venueId={selectedVenueId} unit={unit} />
-            </Suspense>
-          </CardContent>
-        </Card>
-      </div>
     </main>
   );
 }
