@@ -4,9 +4,7 @@ import {
   getLiveReadings,
   getTodayVisitorCounts,
   getHeatmap,
-  getTimeSeries,
   getHourlyAverages,
-  getDailyAverages,
 } from "./queries";
 
 export const getCachedVenues = unstable_cache(getVenues, ["venues"], {
@@ -29,20 +27,8 @@ export const getCachedHeatmap = unstable_cache(getHeatmap, ["heatmap"], {
   revalidate: 300,
 });
 
-export const getCachedTimeSeries = unstable_cache(
-  getTimeSeries,
-  ["time-series"],
-  { revalidate: 60 }
-);
-
 export const getCachedHourlyAverages = unstable_cache(
   getHourlyAverages,
   ["hourly-averages"],
-  { revalidate: 300 }
-);
-
-export const getCachedDailyAverages = unstable_cache(
-  getDailyAverages,
-  ["daily-averages"],
   { revalidate: 300 }
 );
