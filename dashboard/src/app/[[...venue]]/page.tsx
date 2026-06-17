@@ -90,10 +90,12 @@ export default async function Home({ params, searchParams }: Props) {
   // (still in the wild from the old query-param scheme) to their slug path, and
   // the bare domain to the default venue. Both are 308s so crawlers update.
   if (!segments || segments.length === 0) {
-    const legacyVenueId = sp.venue;
+    // Match a legacy id only when the whole value is an integer; pick the
+    // first if the param is repeated. Anything else falls back to the default.
+    const rawVenueId = Array.isArray(sp.venue) ? sp.venue[0] : sp.venue;
     const legacyVenue =
-      typeof legacyVenueId === "string"
-        ? venues.find((v) => v.id === parseInt(legacyVenueId, 10))
+      rawVenueId && /^\d+$/.test(rawVenueId)
+        ? venues.find((v) => v.id === Number(rawVenueId))
         : undefined;
     const target = legacyVenue ?? venues[0];
     if (!target) notFound(); // empty DB — nothing to redirect to
