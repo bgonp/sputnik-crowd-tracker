@@ -20,8 +20,29 @@ const BATCH_SIZE = 500;
 //   SEED_DAYS         days of history            (default 90)
 //   SEED_INTERVAL_MIN minutes between readings   (default 1, matches the Pi's 60s cadence)
 const OUT = process.env.SEED_OUT ?? "file:../dev.db";
-const DAYS = Number(process.env.SEED_DAYS ?? 90);
-const INTERVAL_MIN = Number(process.env.SEED_INTERVAL_MIN ?? 1);
+const DAYS = positiveInt("SEED_DAYS", 90);
+const INTERVAL_MIN = positiveInt("SEED_INTERVAL_MIN", 1);
+
+// Mirror scraper/src/db.ts: local file:/:memory: URLs ignore the token, but a
+// remote URL needs one — fail fast rather than surfacing a confusing 401, and
+// guard against accidentally seeding (and wiping) a remote DB without credentials.
+const isLocalOut = OUT.startsWith("file:") || OUT.startsWith(":memory:");
+const OUT_AUTH = process.env.TURSO_AUTH_TOKEN ?? "";
+if (!isLocalOut && !OUT_AUTH) {
+  throw new Error(`TURSO_AUTH_TOKEN is required for a remote SEED_OUT URL (${OUT.split(":")[0]}://…)`);
+}
+
+// Parse a positive-integer env override; reject 0/NaN/negatives so a typo can't
+// silently produce an empty dataset (or, for the interval, an infinite loop).
+function positiveInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error(`${name} must be a positive integer, got ${JSON.stringify(raw)}`);
+  }
+  return n;
+}
 
 // Approximate Madrid UTC offset (DST: +2 Apr–Oct, +1 otherwise)
 function madridOffsetHours(month: number): number {
@@ -78,7 +99,7 @@ async function main() {
   const mockNow = process.env.MOCK_NOW;
   const now = mockNow ? new Date(mockNow) : new Date();
 
-  const db = createClient({ url: OUT });
+  const db = createClient({ url: OUT, authToken: OUT_AUTH });
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS readings (

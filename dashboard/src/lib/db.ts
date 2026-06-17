@@ -38,6 +38,15 @@ function resolveLocalFileUrl(raw: string): string {
   if (!process.env.VERCEL) return `file:${absolute}`;
 
   const writable = join(tmpdir(), basename(absolute));
-  if (!existsSync(writable)) copyFileSync(absolute, writable);
+  if (!existsSync(writable)) {
+    if (!existsSync(absolute)) {
+      throw new Error(
+        `Local DB fixture not found at ${absolute}. On Vercel it must be shipped into ` +
+          `the serverless trace via outputFileTracingIncludes in next.config.ts, which ` +
+          `only runs for VERCEL_ENV=preview builds — check TURSO_URL is set on the right environment.`
+      );
+    }
+    copyFileSync(absolute, writable);
+  }
   return `file:${writable}`;
 }
