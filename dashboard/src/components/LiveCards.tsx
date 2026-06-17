@@ -54,8 +54,17 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
         return (
           <Card
             key={r.venueId}
+            role="button"
+            tabIndex={0}
+            aria-label={`Ver gráficas de ${shortVenueName(r.venueName)}`}
             onClick={() => selectVenue(r.venueId, r.venueName)}
-            className={`group cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50 hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                selectVenue(r.venueId, r.venueName);
+              }
+            }}
+            className={`group cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50 hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
           >
             <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
