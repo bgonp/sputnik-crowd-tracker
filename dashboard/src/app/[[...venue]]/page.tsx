@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
+import { BarChart3, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
+import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { HeatmapSection } from "@/components/sections/HeatmapSection";
 import { HourlySection } from "@/components/sections/HourlySection";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -159,29 +161,43 @@ export default async function Home({ params, searchParams }: Props) {
         </Suspense>
       </section>
 
-      {selectedVenue && (
-        <div className="grid gap-8 xl:grid-cols-2 items-start">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Mapa de calor — {selectedVenueName}</CardTitle>
-            </CardHeader>
-            <CardContent>
+      <div className="grid gap-8 xl:grid-cols-2 items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Mapa de calor{selectedVenueName && ` — ${selectedVenueName}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedVenue ? (
               <Suspense fallback={<ChartSkeleton className="h-48" />}>
                 <HeatmapSection venueId={selectedVenue.id} />
               </Suspense>
-            </CardContent>
-          </Card>
+            ) : (
+              <ChartPlaceholder
+                className="h-48"
+                icon={<CalendarDays className="h-6 w-6" />}
+                label="Selecciona un rocódromo arriba para ver su mapa de calor"
+              />
+            )}
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Media por hora{selectedVenueName && ` — ${selectedVenueName}`}
+              </CardTitle>
+              {selectedVenue && (
                 <Suspense>
                   <UnitToggle unit={unit} />
                 </Suspense>
-              </div>
-            </CardHeader>
-            <CardContent>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {selectedVenue ? (
               <Suspense fallback={<ChartSkeleton />}>
                 <HourlySection
                   venueId={selectedVenue.id}
@@ -190,10 +206,15 @@ export default async function Home({ params, searchParams }: Props) {
                   currentReading={currentReading}
                 />
               </Suspense>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            ) : (
+              <ChartPlaceholder
+                icon={<BarChart3 className="h-6 w-6" />}
+                label="Selecciona un rocódromo arriba para ver su media por hora"
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }

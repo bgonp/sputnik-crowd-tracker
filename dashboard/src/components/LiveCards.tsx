@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
 import { shortVenueName, venueSlug } from "@/lib/venues";
@@ -55,12 +55,16 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
           <Card
             key={r.venueId}
             onClick={() => selectVenue(r.venueId, r.venueName)}
-            className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
+            className={`group cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50 hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
           >
             <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                 {shortVenueName(r.venueName)}
-                {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
