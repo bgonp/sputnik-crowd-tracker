@@ -175,6 +175,7 @@ export default async function Home({ params, searchParams }: Props) {
               </Suspense>
             ) : (
               <ChartPlaceholder
+                variant="grid"
                 className="h-48"
                 icon={<CalendarDays className="h-6 w-6" />}
                 label="Selecciona un rocódromo arriba para ver su mapa de calor"
