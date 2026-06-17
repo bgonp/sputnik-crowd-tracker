@@ -83,29 +83,30 @@ export default async function Home({ params, searchParams }: Props) {
   if (segments && segments.length > 1) notFound();
 
   const sp = await searchParams;
-  const venues = await getCachedVenues();
 
   // Legacy `/?venue=<id>` links (from the old query-param scheme) still
   // 308-redirect to their slug path so previously-indexed URLs keep working.
   // The bare domain no longer redirects — it renders the all-venues overview.
+  // The venue list is only needed here and for slug resolution, so it's fetched
+  // lazily; the bare `/` overview (the most-hit route) skips the query entirely.
   if ((!segments || segments.length === 0) && sp.venue !== undefined) {
-    // Match a legacy id only when the whole value is an integer; pick the
-    // first if the param is repeated. Anything else falls through.
+    // Match a legacy id only when the whole value is an integer; pick the first
+    // if the param is repeated. Anything else falls through to the overview.
     const rawVenueId = Array.isArray(sp.venue) ? sp.venue[0] : sp.venue;
-    const legacyVenue =
-      rawVenueId && /^\d+$/.test(rawVenueId)
-        ? venues.find((v) => v.id === Number(rawVenueId))
-        : undefined;
-    if (legacyVenue) {
-      permanentRedirect(`/${venueSlug(legacyVenue.name)}${forwardedQuery(sp)}`);
+    if (rawVenueId && /^\d+$/.test(rawVenueId)) {
+      const venues = await getCachedVenues();
+      const legacyVenue = venues.find((v) => v.id === Number(rawVenueId));
+      if (legacyVenue) {
+        permanentRedirect(`/${venueSlug(legacyVenue.name)}${forwardedQuery(sp)}`);
+      }
     }
-    // An unknown/garbage `?venue=` value falls through to the overview.
   }
 
   // On a venue path, resolve the slug (404 if unknown). The bare root has no
   // selected venue: it renders the live overview without the per-venue charts.
   let selectedVenue: Venue | undefined;
   if (segments && segments.length === 1) {
+    const venues = await getCachedVenues();
     selectedVenue = findVenueBySlug(venues, segments[0]);
     if (!selectedVenue) notFound();
   }
@@ -126,13 +127,15 @@ export default async function Home({ params, searchParams }: Props) {
   const currentReading = selectedVenue
     ? liveReadings.find((r) => r.venueId === selectedVenue.id)
     : undefined;
-  const madridHour = parseInt(
-    new Intl.DateTimeFormat("es-ES", {
-      timeZone: "Europe/Madrid",
-      hour: "2-digit",
-      hour12: false,
-    }).format(now)
-  );
+  const madridHour = selectedVenue
+    ? parseInt(
+        new Intl.DateTimeFormat("es-ES", {
+          timeZone: "Europe/Madrid",
+          hour: "2-digit",
+          hour12: false,
+        }).format(now)
+      )
+    : 0;
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
