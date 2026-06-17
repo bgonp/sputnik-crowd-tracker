@@ -5,6 +5,7 @@
   "scripts": {
     "scrape": "pnpm --filter scraper start",
     "seed-dev": "pnpm --filter scraper seed-dev",
+    "seed-preview": "pnpm --filter scraper seed-preview",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck"
   }
