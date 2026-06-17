@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 export type Unit = "percentage" | "absolute";
 
 export function UnitToggle({ unit }: { unit: Unit }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   function toggle() {
@@ -16,7 +17,9 @@ export function UnitToggle({ unit }: { unit: Unit }) {
     } else {
       params.delete("unit");
     }
-    router.push(`?${params.toString()}`, { scroll: false });
+    const query = params.toString();
+    // Keep the venue path; only carry a query string when there is one.
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   return (

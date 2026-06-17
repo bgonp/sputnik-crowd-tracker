@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
+import { shortVenueName, venueSlug } from "@/lib/venues";
 
 function occupancyColor(pct: number): React.CSSProperties {
   const hue = 120 - Math.pow(pct / 100, 0.5) * 120;
@@ -30,13 +31,16 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
   // setState-in-effect to reset it once the transition settles.
   const activeId = isPending && pendingId !== null ? pendingId : selectedId;
 
-  function selectVenue(venueId: number) {
+  function selectVenue(venueId: number, venueName: string) {
     if (venueId === activeId) return;
     setPendingId(venueId);
     startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("venue", String(venueId));
-      router.push(`?${params.toString()}`, { scroll: false });
+      // Navigate to the venue's slug path, preserving the unit toggle.
+      const path = `/${venueSlug(venueName)}`;
+      const unit = searchParams.get("unit");
+      router.push(unit === "absolute" ? `${path}?unit=absolute` : path, {
+        scroll: false,
+      });
     });
   }
 
@@ -49,12 +53,12 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
         return (
           <Card
             key={r.venueId}
-            onClick={() => selectVenue(r.venueId)}
+            onClick={() => selectVenue(r.venueId, r.venueName)}
             className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
           >
             <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                {r.venueName.replace(" Principal", "")}
+                {shortVenueName(r.venueName)}
                 {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
               </CardTitle>
             </CardHeader>
