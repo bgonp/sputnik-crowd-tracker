@@ -26,14 +26,23 @@ interface Props {
   searchParams: Promise<SearchParams>;
 }
 
+// A param can arrive repeated, which Next surfaces as `string[]`; treat the
+// unit as "absolute" when any of its values is, so behavior is deterministic.
+const isAbsoluteUnit = (value: string | string[] | undefined): boolean =>
+  Array.isArray(value) ? value.includes("absolute") : value === "absolute";
+
 // Carry the incoming query string through the canonicalization redirect so
 // attribution params (utm_*, etc.) survive for analytics. Drop the legacy
-// `venue` key (it's now encoded in the path) and a redundant default `unit`.
+// `venue` key (it's now encoded in the path) and collapse `unit` to a single
+// `unit=absolute`, since percentage is the default and isn't worth carrying.
 function forwardedQuery(searchParams: SearchParams): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams)) {
     if (value === undefined || key === "venue") continue;
-    if (key === "unit" && value !== "absolute") continue;
+    if (key === "unit") {
+      if (isAbsoluteUnit(value)) params.set("unit", "absolute");
+      continue;
+    }
     for (const v of Array.isArray(value) ? value : [value]) params.append(key, v);
   }
   const query = params.toString();
@@ -73,7 +82,7 @@ export default async function Home({ params, searchParams }: Props) {
   if (segments && segments.length > 1) notFound();
 
   const sp = await searchParams;
-  const unit: Unit = sp.unit === "absolute" ? "absolute" : "percentage";
+  const unit: Unit = isAbsoluteUnit(sp.unit) ? "absolute" : "percentage";
 
   const venues = await getCachedVenues();
 
