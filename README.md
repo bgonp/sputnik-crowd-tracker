@@ -139,9 +139,10 @@ green before merging — test, lint, typecheck, and build are all required to pa
 
 | Variable                      | Used by             | Notes                                                              |
 | ----------------------------- | ------------------- | ------------------------------------------------------------------ |
-| `TURSO_URL`                   | scraper + dashboard | `libsql://…` for remote, or `file:../dev.db` for local mock        |
+| `TURSO_URL`                   | scraper + dashboard | `libsql://…` for remote, or a `file:` URL for local mock / previews (`file:../dev.db` local, `file:preview.db` on Vercel previews) |
 | `TURSO_AUTH_TOKEN`            | scraper + dashboard | **read-write** for the scraper, **read-only** for the dashboard; for a local `file:` URL the value is ignored, but set it empty (`TURSO_AUTH_TOKEN=`) rather than omitting it |
 | `MOCK_NOW`                    | dashboard / seed    | ISO timestamp to freeze "now" for reproducible views/tests         |
+| `SEED_OUT` / `SEED_DAYS` / `SEED_INTERVAL_MIN` | seed | Override the seed script's output URL, days of history, and reading interval (defaults: `file:../dev.db`, 90, 1). `pnpm seed-preview` sets these to build the trimmed `dashboard/preview.db` fixture |
 | `NEXT_PUBLIC_SITE_URL`        | dashboard           | Public base URL for canonical links, Open Graph, sitemap & robots; falls back to Vercel's production URL, then `http://localhost:3000` |
 | `FRESHNESS_THRESHOLD_MINUTES` | scraper             | Staleness threshold for `check-freshness` (default 15)             |
 
@@ -161,6 +162,29 @@ secret (freshness Action, read-only).
 - **Dashboard** → Vercel (connect the repo; set `TURSO_URL` + `TURSO_AUTH_TOKEN` env vars).
 - **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso.
 - **Visitor analytics** → [Vercel Web Analytics](https://vercel.com/docs/analytics) is wired in via the `<Analytics />` component in `dashboard/src/app/layout.tsx`. It's cookieless (no consent banner required) and needs no env vars — just enable Web Analytics for the project in the Vercel dashboard.
+
+### Preview deployments (don't spend Turso reads)
+
+Vercel builds a preview for every PR. To keep those previews from querying production
+Turso (and burning read quota), point them at a committed SQLite fixture instead:
+
+1. A trimmed mock DB lives at `dashboard/preview.db` (14 days, 6 venues, 5-min
+   readings). Regenerate it with `pnpm seed-preview` and commit the result when you
+   want fresher sample data.
+2. In the Vercel project, set **Preview**-scoped env vars (Settings → Environment
+   Variables, or `vercel env add <name> preview`):
+   - `TURSO_URL=file:preview.db`
+   - `TURSO_AUTH_TOKEN=` (empty — ignored for `file:` URLs)
+
+   Leave the **Production** values pointing at real Turso. Vercel scopes env vars per
+   environment, so only previews use the fixture.
+
+`next.config.ts` ships `preview.db` into the serverless trace
+(`outputFileTracingIncludes`), and `src/lib/db.ts` resolves the relative `file:` URL
+to an absolute path and copies it into the writable `/tmp` at startup (the Vercel
+bundle filesystem is read-only). The live card always shows the fixture's newest
+reading; "today" visitor totals may be empty if the fixture predates the request date
+— set `MOCK_NOW` to the fixture's last day on Preview if you want them populated.
 
 > **Why a Raspberry Pi and not the cloud?** The gym server blocks requests from
 > datacenter IP ranges — GitHub Actions, Claude workers, and AWS all get blocked.
