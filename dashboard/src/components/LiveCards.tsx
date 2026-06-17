@@ -15,7 +15,8 @@ function occupancyColor(pct: number): React.CSSProperties {
 interface Props {
   readings: LiveReading[];
   todayCounts: DailyVisitorCount[];
-  selectedId: number;
+  // Undefined on the all-venues overview (`/`), where no card is highlighted.
+  selectedId?: number;
 }
 
 export function LiveCards({ readings, todayCounts, selectedId }: Props) {

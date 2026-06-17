@@ -53,7 +53,7 @@ sputnik-crowd-tracker/
 │       ├── app/
 │       │   ├── layout.tsx          # root layout + ThemeProvider
 │       │   └── [[...venue]]/
-│       │       └── page.tsx        # main dashboard at /<venue-slug> (server component)
+│       │       └── page.tsx        # all-venues overview at / and per-venue dashboard at /<venue-slug>
 │       ├── components/
 │       │   ├── ui/            # shadcn/Base UI primitives
 │       │   ├── sections/      # server components that fetch + render

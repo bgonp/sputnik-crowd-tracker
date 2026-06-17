@@ -15,6 +15,7 @@ import {
   getCachedTodayVisitorCounts,
 } from "@/lib/cached-queries";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
+import type { Venue } from "@/lib/queries";
 
 export const revalidate = 60;
 
@@ -50,8 +51,8 @@ function forwardedQuery(searchParams: SearchParams): string {
 }
 
 // Give each venue its own indexable title/description and canonical URL.
-// The root (no slug) redirects, so it has no metadata of its own here and
-// falls back to the generic tags from the layout.
+// The root (no slug) is the all-venues overview, so it has no metadata of its
+// own here and falls back to the generic site tags from the layout.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { venue: segments } = await params;
   if (!segments || segments.length !== 1) return {};
@@ -82,30 +83,32 @@ export default async function Home({ params, searchParams }: Props) {
   if (segments && segments.length > 1) notFound();
 
   const sp = await searchParams;
-  const unit: Unit = isAbsoluteUnit(sp.unit) ? "absolute" : "percentage";
-
   const venues = await getCachedVenues();
 
-  // Root URL: there's no venue in the path. Send legacy `/?venue=<id>` links
-  // (still in the wild from the old query-param scheme) to their slug path, and
-  // the bare domain to the default venue. Both are 308s so crawlers update.
-  if (!segments || segments.length === 0) {
+  // Legacy `/?venue=<id>` links (from the old query-param scheme) still
+  // 308-redirect to their slug path so previously-indexed URLs keep working.
+  // The bare domain no longer redirects — it renders the all-venues overview.
+  if ((!segments || segments.length === 0) && sp.venue !== undefined) {
     // Match a legacy id only when the whole value is an integer; pick the
-    // first if the param is repeated. Anything else falls back to the default.
+    // first if the param is repeated. Anything else falls through.
     const rawVenueId = Array.isArray(sp.venue) ? sp.venue[0] : sp.venue;
     const legacyVenue =
       rawVenueId && /^\d+$/.test(rawVenueId)
         ? venues.find((v) => v.id === Number(rawVenueId))
         : undefined;
-    const target = legacyVenue ?? venues[0];
-    if (!target) notFound(); // empty DB — nothing to redirect to
-    permanentRedirect(`/${venueSlug(target.name)}${forwardedQuery(sp)}`);
+    if (legacyVenue) {
+      permanentRedirect(`/${venueSlug(legacyVenue.name)}${forwardedQuery(sp)}`);
+    }
+    // An unknown/garbage `?venue=` value falls through to the overview.
   }
 
-  const selectedVenue = findVenueBySlug(venues, segments[0]);
-  if (!selectedVenue) notFound();
-
-  const selectedVenueId = selectedVenue.id;
+  // On a venue path, resolve the slug (404 if unknown). The bare root has no
+  // selected venue: it renders the live overview without the per-venue charts.
+  let selectedVenue: Venue | undefined;
+  if (segments && segments.length === 1) {
+    selectedVenue = findVenueBySlug(venues, segments[0]);
+    if (!selectedVenue) notFound();
+  }
 
   const now = process.env.MOCK_NOW ? new Date(process.env.MOCK_NOW) : new Date();
   // Round to 1-minute intervals so requests arriving milliseconds apart share a cache entry
@@ -117,7 +120,12 @@ export default async function Home({ params, searchParams }: Props) {
     getCachedTodayVisitorCounts(roundedNowIso),
   ]);
 
-  const currentReading = liveReadings.find((r) => r.venueId === selectedVenueId);
+  // Per-venue chart inputs (only consumed when a venue is selected).
+  const unit: Unit = isAbsoluteUnit(sp.unit) ? "absolute" : "percentage";
+  const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
+  const currentReading = selectedVenue
+    ? liveReadings.find((r) => r.venueId === selectedVenue.id)
+    : undefined;
   const madridHour = parseInt(
     new Intl.DateTimeFormat("es-ES", {
       timeZone: "Europe/Madrid",
@@ -125,8 +133,6 @@ export default async function Home({ params, searchParams }: Props) {
       hour12: false,
     }).format(now)
   );
-
-  const selectedVenueName = shortVenueName(selectedVenue.name);
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
@@ -146,43 +152,45 @@ export default async function Home({ params, searchParams }: Props) {
           Aforo en tiempo real — todos los centros
         </h2>
         <Suspense>
-          <LiveCards readings={liveReadings} todayCounts={todayVisitorCounts} selectedId={selectedVenueId} />
+          <LiveCards readings={liveReadings} todayCounts={todayVisitorCounts} selectedId={selectedVenue?.id} />
         </Suspense>
       </section>
 
-      <div className="grid gap-8 xl:grid-cols-2 items-start">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Mapa de calor — {selectedVenueName}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Suspense fallback={<ChartSkeleton className="h-48" />}>
-              <HeatmapSection venueId={selectedVenueId} />
-            </Suspense>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
-              <Suspense>
-                <UnitToggle unit={unit} />
+      {selectedVenue && (
+        <div className="grid gap-8 xl:grid-cols-2 items-start">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Mapa de calor — {selectedVenueName}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<ChartSkeleton className="h-48" />}>
+                <HeatmapSection venueId={selectedVenue.id} />
               </Suspense>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Suspense fallback={<ChartSkeleton />}>
-              <HourlySection
-                venueId={selectedVenueId}
-                unit={unit}
-                currentHour={madridHour}
-                currentReading={currentReading}
-              />
-            </Suspense>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Media por hora — {selectedVenueName}</CardTitle>
+                <Suspense>
+                  <UnitToggle unit={unit} />
+                </Suspense>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<ChartSkeleton />}>
+                <HourlySection
+                  venueId={selectedVenue.id}
+                  unit={unit}
+                  currentHour={madridHour}
+                  currentReading={currentReading}
+                />
+              </Suspense>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </main>
   );
 }
