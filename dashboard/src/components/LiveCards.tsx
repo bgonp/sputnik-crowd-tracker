@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
 import { shortVenueName, venueSlug } from "@/lib/venues";
@@ -15,7 +15,8 @@ function occupancyColor(pct: number): React.CSSProperties {
 interface Props {
   readings: LiveReading[];
   todayCounts: DailyVisitorCount[];
-  selectedId: number;
+  // Undefined on the all-venues overview (`/`), where no card is highlighted.
+  selectedId?: number;
 }
 
 export function LiveCards({ readings, todayCounts, selectedId }: Props) {
@@ -53,13 +54,26 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
         return (
           <Card
             key={r.venueId}
+            role="button"
+            tabIndex={0}
+            aria-label={`Ver gráficas de ${shortVenueName(r.venueName)}`}
             onClick={() => selectVenue(r.venueId, r.venueName)}
-            className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                selectVenue(r.venueId, r.venueName);
+              }
+            }}
+            className={`group cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50 hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
           >
             <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                 {shortVenueName(r.venueName)}
-                {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
