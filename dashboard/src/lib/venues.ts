@@ -13,7 +13,7 @@ export function shortVenueName(name: string): string {
 export function venueSlug(name: string): string {
   return shortVenueName(name)
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip diacritics
+    .replace(/\p{Diacritic}/gu, "") // strip the marks NFD split off the letters
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");

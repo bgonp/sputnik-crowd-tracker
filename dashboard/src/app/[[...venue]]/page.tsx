@@ -18,15 +18,27 @@ import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 
 export const revalidate = 60;
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
 interface Props {
   // Optional catch-all: `/` → undefined, `/<slug>` → [slug].
   params: Promise<{ venue?: string[] }>;
-  searchParams: Promise<{ venue?: string; unit?: string }>;
+  searchParams: Promise<SearchParams>;
 }
 
-// Append the unit only when it's the non-default value, to keep URLs clean.
-const withUnit = (path: string, unit?: string) =>
-  unit === "absolute" ? `${path}?unit=absolute` : path;
+// Carry the incoming query string through the canonicalization redirect so
+// attribution params (utm_*, etc.) survive for analytics. Drop the legacy
+// `venue` key (it's now encoded in the path) and a redundant default `unit`.
+function forwardedQuery(searchParams: SearchParams): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value === undefined || key === "venue") continue;
+    if (key === "unit" && value !== "absolute") continue;
+    for (const v of Array.isArray(value) ? value : [value]) params.append(key, v);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
 
 // Give each venue its own indexable title/description and canonical URL.
 // The root (no slug) redirects, so it has no metadata of its own here and
@@ -55,8 +67,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Home({ params, searchParams }: Props) {
   const { venue: segments } = await params;
-  const { venue: legacyVenueId, unit: unitParam } = await searchParams;
-  const unit: Unit = unitParam === "absolute" ? "absolute" : "percentage";
+
+  // Validate the path shape before any data work: anything deeper than a
+  // single segment can't be a venue, so 404 without touching the DB.
+  if (segments && segments.length > 1) notFound();
+
+  const sp = await searchParams;
+  const unit: Unit = sp.unit === "absolute" ? "absolute" : "percentage";
 
   const venues = await getCachedVenues();
 
@@ -64,16 +81,16 @@ export default async function Home({ params, searchParams }: Props) {
   // (still in the wild from the old query-param scheme) to their slug path, and
   // the bare domain to the default venue. Both are 308s so crawlers update.
   if (!segments || segments.length === 0) {
-    const legacyVenue = legacyVenueId
-      ? venues.find((v) => v.id === parseInt(legacyVenueId, 10))
-      : undefined;
+    const legacyVenueId = sp.venue;
+    const legacyVenue =
+      typeof legacyVenueId === "string"
+        ? venues.find((v) => v.id === parseInt(legacyVenueId, 10))
+        : undefined;
     const target = legacyVenue ?? venues[0];
     if (!target) notFound(); // empty DB — nothing to redirect to
-    permanentRedirect(withUnit(`/${venueSlug(target.name)}`, unitParam));
+    permanentRedirect(`/${venueSlug(target.name)}${forwardedQuery(sp)}`);
   }
 
-  // Anything deeper than a single segment isn't a venue.
-  if (segments.length > 1) notFound();
   const selectedVenue = findVenueBySlug(venues, segments[0]);
   if (!selectedVenue) notFound();
 
