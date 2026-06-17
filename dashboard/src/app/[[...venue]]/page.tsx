@@ -15,38 +15,19 @@ import {
   getCachedTodayVisitorCounts,
 } from "@/lib/cached-queries";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
+import {
+  type SearchParams,
+  isAbsoluteUnit,
+  forwardedQuery,
+  parseLegacyVenueId,
+} from "@/lib/venue-routing";
 
 export const revalidate = 60;
-
-type SearchParams = Record<string, string | string[] | undefined>;
 
 interface Props {
   // Optional catch-all: `/` → undefined, `/<slug>` → [slug].
   params: Promise<{ venue?: string[] }>;
   searchParams: Promise<SearchParams>;
-}
-
-// A param can arrive repeated, which Next surfaces as `string[]`; treat the
-// unit as "absolute" when any of its values is, so behavior is deterministic.
-const isAbsoluteUnit = (value: string | string[] | undefined): boolean =>
-  Array.isArray(value) ? value.includes("absolute") : value === "absolute";
-
-// Carry the incoming query string through the canonicalization redirect so
-// attribution params (utm_*, etc.) survive for analytics. Drop the legacy
-// `venue` key (it's now encoded in the path) and collapse `unit` to a single
-// `unit=absolute`, since percentage is the default and isn't worth carrying.
-function forwardedQuery(searchParams: SearchParams): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (value === undefined || key === "venue") continue;
-    if (key === "unit") {
-      if (isAbsoluteUnit(value)) params.set("unit", "absolute");
-      continue;
-    }
-    for (const v of Array.isArray(value) ? value : [value]) params.append(key, v);
-  }
-  const query = params.toString();
-  return query ? `?${query}` : "";
 }
 
 // Give each venue its own indexable title/description and canonical URL.
@@ -90,13 +71,9 @@ export default async function Home({ params, searchParams }: Props) {
   // (still in the wild from the old query-param scheme) to their slug path, and
   // the bare domain to the default venue. Both are 308s so crawlers update.
   if (!segments || segments.length === 0) {
-    // Match a legacy id only when the whole value is an integer; pick the
-    // first if the param is repeated. Anything else falls back to the default.
-    const rawVenueId = Array.isArray(sp.venue) ? sp.venue[0] : sp.venue;
+    const legacyId = parseLegacyVenueId(sp.venue);
     const legacyVenue =
-      rawVenueId && /^\d+$/.test(rawVenueId)
-        ? venues.find((v) => v.id === Number(rawVenueId))
-        : undefined;
+      legacyId !== null ? venues.find((v) => v.id === legacyId) : undefined;
     const target = legacyVenue ?? venues[0];
     if (!target) notFound(); // empty DB — nothing to redirect to
     permanentRedirect(`/${venueSlug(target.name)}${forwardedQuery(sp)}`);
