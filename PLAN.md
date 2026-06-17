@@ -108,6 +108,7 @@ Next.js App Router with server components reading from Turso directly.
 ### Phase 4 — Deploy
 - Pull the repo onto the Raspberry Pi → cron/systemd runs the scraper every 60s
 - Connect repo to Vercel → dashboard live
+- Point Vercel **Preview** deployments at the committed `dashboard/preview.db` fixture (`TURSO_URL=file:preview.db`) so PR previews don't spend production Turso reads — see README → "Preview deployments"
 
 ---
 
