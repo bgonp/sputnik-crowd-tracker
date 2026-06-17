@@ -178,7 +178,7 @@ export default async function Home({ params, searchParams }: Props) {
                 variant="grid"
                 className="h-48"
                 icon={<CalendarDays className="h-6 w-6" />}
-                label="Selecciona un rocódromo arriba para ver su mapa de calor"
+                label="Selecciona un rocódromo para ver su mapa de calor"
               />
             )}
           </CardContent>
@@ -210,7 +210,7 @@ export default async function Home({ params, searchParams }: Props) {
             ) : (
               <ChartPlaceholder
                 icon={<BarChart3 className="h-6 w-6" />}
-                label="Selecciona un rocódromo arriba para ver su media por hora"
+                label="Selecciona un rocódromo para ver su media por hora"
               />
             )}
           </CardContent>
