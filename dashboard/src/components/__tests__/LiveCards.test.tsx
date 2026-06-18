@@ -71,8 +71,11 @@ describe("LiveCards", () => {
 
   it("exposes each venue as a focusable button", () => {
     render(<LiveCards readings={readings} todayCounts={todayCounts} selectedId={1} />);
+    // Assert the behaviour (keyboard-focusable), not the tabindex attribute, so
+    // this stays green if the card ever becomes a native <button>.
     const card = screen.getByRole("button", { name: "Ver gráficas de Las Rozas" });
-    expect(card).toHaveAttribute("tabindex", "0");
+    card.focus();
+    expect(card).toHaveFocus();
   });
 
   it("navigates when a card is activated with Enter", async () => {
