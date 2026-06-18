@@ -41,8 +41,10 @@ describe("LiveCards", () => {
 
   it("highlights the selected venue and not the others", () => {
     render(<LiveCards readings={readings} todayCounts={todayCounts} selectedId={1} />);
-    expect(cardOf("Alcobendas").className).toContain("ring-2");
-    expect(cardOf("Las Rozas").className).not.toContain("ring-2");
+    // The selection ring is the contiguous `ring-2 ring-primary`; the always-on
+    // focus ring (`focus-visible:ring-2 …`) must not be mistaken for it.
+    expect(cardOf("Alcobendas").className).toContain("ring-2 ring-primary");
+    expect(cardOf("Las Rozas").className).not.toContain("ring-2 ring-primary");
   });
 
   it("navigates to the slug path when a venue is clicked", async () => {
