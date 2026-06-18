@@ -68,4 +68,29 @@ describe("LiveCards", () => {
     await user.click(cardOf("Alcobendas"));
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("exposes each venue as a focusable button", () => {
+    render(<LiveCards readings={readings} todayCounts={todayCounts} selectedId={1} />);
+    // Assert the behaviour (keyboard-focusable), not the tabindex attribute, so
+    // this stays green if the card ever becomes a native <button>.
+    const card = screen.getByRole("button", { name: "Ver gráficas de Las Rozas" });
+    card.focus();
+    expect(card).toHaveFocus();
+  });
+
+  it("navigates when a card is activated with Enter", async () => {
+    const user = userEvent.setup();
+    render(<LiveCards readings={readings} todayCounts={todayCounts} selectedId={1} />);
+    screen.getByRole("button", { name: "Ver gráficas de Las Rozas" }).focus();
+    await user.keyboard("{Enter}");
+    expect(push).toHaveBeenCalledWith("/las-rozas", { scroll: false });
+  });
+
+  it("navigates when a card is activated with Space", async () => {
+    const user = userEvent.setup();
+    render(<LiveCards readings={readings} todayCounts={todayCounts} selectedId={1} />);
+    screen.getByRole("button", { name: "Ver gráficas de Las Rozas" }).focus();
+    await user.keyboard(" ");
+    expect(push).toHaveBeenCalledWith("/las-rozas", { scroll: false });
+  });
 });
