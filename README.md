@@ -127,6 +127,12 @@ pnpm scrape   # one fetch + insert cycle
 pnpm test     # runs Vitest across both packages
 ```
 
+Both packages use Vitest. Dashboard React components are tested with
+[React Testing Library](https://testing-library.com/) on
+[happy-dom](https://github.com/capricorn86/happy-dom) (configured in
+`dashboard/vitest.config.ts` + `dashboard/vitest.setup.ts`); queries and pure
+helpers are plain unit tests. New functionality should ship with a test.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every pull request (and on pushes to `main`):

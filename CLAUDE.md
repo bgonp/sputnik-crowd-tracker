@@ -10,6 +10,7 @@ Full agent context (architecture, where things live, what to read first): @AGENT
 - **TypeScript strict, no `any`.** The scraper also runs `noUncheckedIndexedAccess`.
 - **Timestamps are UTC in the DB.** Convert to `Europe/Madrid` at query time with the DST-aware `madridOffsetModifier()` in `dashboard/src/lib/queries.ts`. Never store local time.
 - **Keep Turso reads low.** Components fetch through `dashboard/src/lib/cached-queries.ts` (`unstable_cache` with staggered revalidation), not raw `queries.ts`. New queries: add to `queries.ts`, test, then expose via `cached-queries.ts`.
+- **Test new functionality — not just the data layer.** Every new piece of behaviour ships with a Vitest test: queries and pure helpers as unit tests, React components with [React Testing Library](https://testing-library.com/) on happy-dom (dashboard config in `dashboard/vitest.config.ts`, matchers/cleanup in `dashboard/vitest.setup.ts`). The goal is to keep the whole project covered, so prefer extracting non-trivial logic out of components into testable modules (e.g. `dashboard/src/lib/venue-routing.ts`) over leaving it inline and untested. Brittle/low-value surfaces (Recharts chart internals, async server components that only fetch) can be skipped — say so in the PR rather than skipping silently.
 - **This is Next.js 16, not the version in your training data** — breaking API changes. Read the guides under `dashboard/node_modules/next/dist/docs/` before writing dashboard code (see `dashboard/AGENTS.md`). Prefer server components.
 
 ## Deployment reality

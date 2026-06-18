@@ -8,6 +8,7 @@ import {
   getTimeSeries,
   getTodayVisitorCounts,
   getLiveReadings,
+  getVenues,
   madridOffsetModifier,
 } from "../queries";
 
@@ -181,5 +182,31 @@ describe("getLiveReadings", () => {
     expect(result).toHaveProperty("capacity");
     expect(result).toHaveProperty("percentage");
     expect(result).toHaveProperty("timestamp");
+  });
+});
+
+// --- getVenues ---
+
+describe("getVenues", () => {
+  it("returns the distinct venue id/name rows", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(
+      fakeResult([
+        { id: 1, name: "Alcobendas Principal" },
+        { id: 2, name: "Las Rozas Principal" },
+      ])
+    );
+    const venues = await getVenues();
+    expect(venues).toEqual([
+      { id: 1, name: "Alcobendas Principal" },
+      { id: 2, name: "Las Rozas Principal" },
+    ]);
+  });
+
+  it("queries distinct venues ordered by id", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getVenues();
+    const sql = vi.mocked(db.execute).mock.calls[0]?.[0] as string;
+    expect(sql).toMatch(/SELECT DISTINCT/i);
+    expect(sql).toMatch(/ORDER BY venue_id/i);
   });
 });
