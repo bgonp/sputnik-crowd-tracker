@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated coverage report (created before lint runs in CI).
+    "coverage/**",
   ]),
 ]);
 
