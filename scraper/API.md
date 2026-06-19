@@ -75,6 +75,27 @@ Legazpi, Chamberí, Guindalera). `entries`/`exits` are cumulative daily counters
 that reset each day — derive deltas in queries, don't assume monotonic growth
 across day boundaries.
 
+## Collection window (open hours)
+
+The scraper only collects while a venue is open. **The API exposes no opening
+hours** — `obtenerOcupacion` returns occupancy 24/7 and there is no `horarios`
+endpoint — so hours are maintained as config in `src/open-hours.ts` (curated
+from the public site, `sputnikclimbing.com/contacto`; re-verify if the gym
+changes its schedule). On each run the scraper:
+
+1. Skips the entire cycle (no page fetch, no insert) when **every** venue is
+   closed — this is where the overnight read/write savings come from.
+2. Otherwise fetches all venues as usual, then inserts **only** the venues that
+   are individually open right now (venues open later / close earlier than one
+   another, so the day's edges are trimmed per-venue).
+
+An unrecognized venue (no configured schedule) is treated as **open** — fail-safe,
+so a newly added venue keeps being collected rather than silently dropped. Hours
+are Madrid local; public holidays are not modeled (Sunday hours stand in).
+
+The freshness monitor (`check-freshness.ts`) shares this logic and pauses its
+staleness alerts during closed windows, so the nightly pause is not a false alarm.
+
 ## When it breaks — checklist
 
 1. **HTTP 403 / blocked** → likely IP blocking. Confirm the scraper is on the Pi /

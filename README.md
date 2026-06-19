@@ -174,7 +174,7 @@ secret (freshness Action, read-only).
 ## Deployment
 
 - **Dashboard** → Vercel (connect the repo; set `TURSO_URL` + `TURSO_AUTH_TOKEN` env vars).
-- **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso.
+- **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso. It only collects while venues are open (hours in `scraper/src/open-hours.ts`): when every venue is closed it skips the cycle entirely, and otherwise inserts only the venues currently open. This cuts overnight writes and keeps the readings table smaller. The cron still fires every 60s — the gate is a cheap early-exit, so no schedule change is needed on the Pi.
 - **Visitor analytics** → [Vercel Web Analytics](https://vercel.com/docs/analytics) is wired in via the `<Analytics />` component in `dashboard/src/app/layout.tsx`. It's cookieless (no consent banner required) and needs no env vars — just enable Web Analytics for the project in the Vercel dashboard.
 
 ### Preview deployments (don't spend Turso reads)
@@ -221,11 +221,15 @@ fails — which emails the repo owner — flagging that data collection has stal
 (Pi down, IP block, or the gym API changed). It only reads Turso, so it runs fine
 from GitHub's runners even though scraping can't.
 
+The check is **open-hours-aware** (it shares `scraper/src/open-hours.ts` with the
+scraper): when every venue is closed it pauses staleness alerts, so the scraper's
+intentional overnight pause is not flagged as a fault. That's why the cron runs
+around the clock — no daytime-only window hack is needed, and the suppression is
+per-venue and weekend-aware rather than a fixed time band.
+
 Requires the `TURSO_URL` and `TURSO_AUTH_TOKEN` repo secrets (a read-only token
-is sufficient — it only reads). Run it on demand
-from the Actions tab (`workflow_dispatch`). If the gym API goes quiet overnight
-and causes false alarms, switch the cron to the daytime-only window noted in the
-workflow file.
+is sufficient — it only reads). Run it on demand from the Actions tab
+(`workflow_dispatch`).
 
 ## License
 
