@@ -1,5 +1,6 @@
 import { createDbClient } from "./db.js";
 import { toReadings, type Reading } from "./transform.js";
+import { madridMoment, anyVenueOpenAt, isVenueOpenAt } from "./open-hours.js";
 
 const GYM_URL = "https://sputnikclimbing.deporsite.net/aforo-guindalera";
 const OCCUPANCY_API_URL =
@@ -99,11 +100,36 @@ async function insertReadings(readings: Reading[]): Promise<void> {
   console.log(`Inserted ${readings.length} readings at ${readings[0]?.timestamp}`);
 }
 
+/** Format a Madrid minute-of-day as "HH:MM" for log messages. */
+function formatMinute(minuteOfDay: number): string {
+  const hh = String(Math.floor(minuteOfDay / 60)).padStart(2, "0");
+  const mm = String(minuteOfDay % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 async function run(): Promise<void> {
-  const timestamp = new Date().toISOString();
+  const now = new Date();
+  const moment = madridMoment(now);
+
+  // Skip the whole cycle when every venue is closed — no fetch, no write. This
+  // is where the bulk of the overnight read/write savings come from.
+  if (!anyVenueOpenAt(moment)) {
+    console.log(`All venues closed at Madrid ${formatMinute(moment.minuteOfDay)} (dow ${moment.dow}) — skipping scrape.`);
+    return;
+  }
+
+  const timestamp = now.toISOString();
   const { csrf, cookie } = await fetchCsrfToken();
   const venues = await fetchOccupancy(csrf, cookie);
-  const readings = toReadings(venues, timestamp);
+
+  // Some venues open later / close earlier than others, so drop readings for
+  // venues that are individually closed right now even when others are open.
+  const readings = toReadings(venues, timestamp).filter((r) => isVenueOpenAt(r.venueName, moment));
+  if (readings.length === 0) {
+    console.log(`No venues open at Madrid ${formatMinute(moment.minuteOfDay)} — nothing to insert.`);
+    return;
+  }
+
   await insertReadings(readings);
 }
 
