@@ -25,15 +25,15 @@ export function evaluateFreshness(
   expectedOpen = true,
 ): FreshnessResult {
   const result = evaluateAge(latest, now, thresholdMinutes);
-  if (!expectedOpen && result.stale) {
+
+  // An unparseable timestamp means corrupted data, not an expected overnight
+  // pause — keep alarming on it regardless of open hours.
+  const unparseable = result.latest != null && result.ageMinutes == null;
+
+  if (!expectedOpen && result.stale && !unparseable) {
     // Regenerate the message rather than embedding the STALE one, so the output
     // doesn't read as a contradictory "OK … STALE: …".
-    const detail =
-      result.ageMinutes != null
-        ? `latest reading is ${result.ageMinutes} min old`
-        : result.latest
-          ? `latest reading timestamp could not be parsed`
-          : `no readings yet`;
+    const detail = result.ageMinutes != null ? `latest reading is ${result.ageMinutes} min old` : `no readings yet`;
     return {
       ...result,
       stale: false,

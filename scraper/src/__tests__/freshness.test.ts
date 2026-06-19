@@ -62,6 +62,13 @@ describe("evaluateFreshness", () => {
     expect(r.message).toMatch(/closed/);
   });
 
+  it("still alarms on an unparseable timestamp even when all venues are closed", () => {
+    // Corrupted data is a real fault, not an expected overnight pause.
+    const r = evaluateFreshness("not-a-date", NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(true);
+    expect(r.message).toMatch(/^STALE/);
+  });
+
   it("still reports fresh data as fresh while closed (no false 'closed' message)", () => {
     const latest = new Date(NOW.getTime() - 2 * 60_000).toISOString();
     const r = evaluateFreshness(latest, NOW, 15, /* expectedOpen */ false);

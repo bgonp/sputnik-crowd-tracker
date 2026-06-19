@@ -117,7 +117,9 @@ async function main() {
   `);
   await db.execute("DELETE FROM readings");
 
-  const startMs = now.getTime() - DAYS * 24 * 60 * 60 * 1000;
+  // DAYS days ending *today* (inclusive): the last iteration lands on `now`'s
+  // date, generated partially up to the current time; earlier days are full.
+  const startMs = now.getTime() - (DAYS - 1) * 24 * 60 * 60 * 1000;
 
   let pending: Parameters<typeof db.batch>[0] = [];
   let total = 0;
@@ -138,8 +140,10 @@ async function main() {
     const dow   = date.getUTCDay();
 
     // Compute today's cutoff as a Madrid minute-of-day (to stop generating
-    // future data); past days run to each venue's own closing time.
-    const isToday = d === DAYS - 1;
+    // future data); past days run to each venue's own closing time. Match on the
+    // actual UTC date rather than the loop index so the cutoff tracks `now`.
+    const isToday =
+      year === now.getUTCFullYear() && month === now.getUTCMonth() + 1 && day === now.getUTCDate();
     // Clamp to 23:xx: near midnight UTC the +1/+2 offset can push the Madrid
     // hour to 24+, which would let the cutoff exceed the day and emit "future"
     // readings for the last day.
