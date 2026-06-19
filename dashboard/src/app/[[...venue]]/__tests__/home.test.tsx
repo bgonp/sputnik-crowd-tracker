@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { LiveReading, DailyVisitorCount } from "@/lib/queries";
 
@@ -77,10 +77,6 @@ beforeEach(() => {
   getCachedTodayVisitorCounts.mockReset().mockResolvedValue(TODAY);
   notFound.mockClear();
   permanentRedirect.mockClear();
-});
-
-afterEach(() => {
-  delete process.env.MOCK_NOW;
 });
 
 // Server components are async functions returning an element; await then render.
