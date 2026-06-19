@@ -22,8 +22,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test
-        run: pnpm -r run test
+      - name: Test (with coverage report)
+        # Coverage is report-only (no thresholds), so this never fails on
+        # coverage — the summary just prints in the job log for visibility.
+        run: pnpm -r run test:coverage
 
       - name: Lint
         run: pnpm --filter dashboard lint

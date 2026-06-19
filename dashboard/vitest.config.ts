@@ -12,5 +12,18 @@ export default defineConfig({
     // pure-logic tests (queries, slug helpers, routing) run fine in it too.
     environment: "happy-dom",
     setupFiles: ["./vitest.setup.ts"],
+    coverage: {
+      // Report-only — no thresholds, never fails CI. Run with `pnpm test:coverage`.
+      provider: "v8",
+      reporter: ["text-summary", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/*.test.{ts,tsx}", // test files themselves
+        "src/components/ui/**", // vendored shadcn / Base UI primitives
+        "src/app/layout.tsx", // static shell
+        "src/app/opengraph-image.tsx", // edge image generation, not unit-testable
+        "**/*.d.ts",
+      ],
+    },
   },
 });

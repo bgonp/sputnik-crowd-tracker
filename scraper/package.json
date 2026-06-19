@@ -8,15 +8,17 @@
     "seed-preview": "SEED_OUT=file:../dashboard/preview.db SEED_DAYS=14 SEED_INTERVAL_MIN=5 tsx --env-file-if-exists=.env src/seed-dev.ts",
     "check-freshness": "tsx --env-file-if-exists=.env src/check-freshness.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
+    "@vitest/coverage-v8": "^4.1.9",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }

@@ -124,7 +124,8 @@ pnpm scrape   # one fetch + insert cycle
 ### Tests
 
 ```bash
-pnpm test     # runs Vitest across both packages
+pnpm test            # runs Vitest across both packages
+pnpm test:coverage   # same, plus a coverage report (text + HTML in coverage/)
 ```
 
 Both packages use Vitest. Dashboard React components are tested with
@@ -133,11 +134,18 @@ Both packages use Vitest. Dashboard React components are tested with
 `dashboard/vitest.config.ts` + `dashboard/vitest.setup.ts`); queries and pure
 helpers are plain unit tests. New functionality should ship with a test.
 
+Coverage is **report-only** — there are no thresholds and it never fails CI; it's
+a visibility signal, not a gate. CI prints the summary in the job log on every PR.
+Vendored UI primitives, static/edge files, and dev tooling are excluded; the
+remaining numbers reflect our own logic, so a drop flags newly-untested code.
+Deliberately-uncovered surfaces (Recharts charts, async server `sections/`, the
+scraper's network/DB entry points) show as low and are expected.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every pull request (and on pushes to `main`):
-it installs dependencies, runs the Vitest suites, lints the dashboard, type-checks
-both packages (`tsc --noEmit`), and builds it. Open a PR per change and let CI go
+it installs dependencies, runs the Vitest suites (printing a report-only coverage
+summary), lints the dashboard, type-checks both packages (`tsc --noEmit`), and builds it. Open a PR per change and let CI go
 green before merging — test, lint, typecheck, and build are all required to pass.
 (`tsc` matters because the scraper runs under `tsx`, which skips type checking.)
 
