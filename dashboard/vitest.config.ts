@@ -22,6 +22,9 @@ export default defineConfig({
         "src/components/ui/**", // vendored shadcn / Base UI primitives
         "src/app/layout.tsx", // static shell
         "src/app/opengraph-image.tsx", // edge image generation, not unit-testable
+        "src/lib/db.ts", // Turso client singleton built from env — nothing to unit-test
+        "src/lib/cached-queries.ts", // thin unstable_cache wrappers over the tested queries
+        "src/components/HourlyChart.tsx", // Recharts chart — needs a real browser/sized container
         "**/*.d.ts",
       ],
     },
