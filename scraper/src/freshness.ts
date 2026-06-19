@@ -12,8 +12,38 @@ export interface FreshnessResult {
  * Pure freshness evaluation: given the most recent reading timestamp, decide
  * whether data collection has stalled. Measuring the data's age (not the time
  * since the last check) means this is robust to cron scheduling jitter.
+ *
+ * `expectedOpen` reflects whether any venue is supposed to be collecting right
+ * now. When it is `false` (everything closed), a stale verdict is downgraded to
+ * OK — the scraper intentionally pauses overnight, so missing recent readings
+ * is expected, not a fault. Fresh data is still reported as fresh.
  */
 export function evaluateFreshness(
+  latest: string | null,
+  now: Date,
+  thresholdMinutes: number,
+  expectedOpen = true,
+): FreshnessResult {
+  const result = evaluateAge(latest, now, thresholdMinutes);
+
+  // An unparseable timestamp means corrupted data, not an expected overnight
+  // pause — keep alarming on it regardless of open hours.
+  const unparseable = result.latest != null && result.ageMinutes == null;
+
+  if (!expectedOpen && result.stale && !unparseable) {
+    // Regenerate the message rather than embedding the STALE one, so the output
+    // doesn't read as a contradictory "OK … STALE: …".
+    const detail = result.ageMinutes != null ? `latest reading is ${result.ageMinutes} min old` : `no readings yet`;
+    return {
+      ...result,
+      stale: false,
+      message: `OK (all venues closed): ${detail} — staleness checks paused during closed hours.`,
+    };
+  }
+  return result;
+}
+
+function evaluateAge(
   latest: string | null,
   now: Date,
   thresholdMinutes: number,

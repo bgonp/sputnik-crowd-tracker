@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Client } from "@libsql/client";
-import { parseThresholdMinutes, checkFreshness } from "../check-freshness.js";
+import { parseThresholdMinutes, checkFreshness, expectFreshReading } from "../check-freshness.js";
 
 describe("parseThresholdMinutes", () => {
   it("falls back to the default (15) when unset", () => {
@@ -41,5 +41,29 @@ describe("checkFreshness", () => {
     const result = await checkFreshness(client, new Date("2026-06-19T11:00:00Z"), 15);
     expect(result.stale).toBe(true);
     expect(result.latest).toBeNull();
+  });
+
+  it("does not alarm on stale data when venues are closed (expectedOpen=false)", async () => {
+    const now = new Date("2026-06-19T11:00:00Z");
+    const result = await checkFreshness(clientReturning("2026-06-19T10:00:00Z"), now, 15, false);
+    expect(result.stale).toBe(false);
+  });
+});
+
+describe("expectFreshReading", () => {
+  it("is true during open hours", () => {
+    // 2026-06-19T16:00:00Z → 18:00 Madrid Friday, well inside open hours.
+    expect(expectFreshReading(new Date("2026-06-19T16:00:00Z"), 15)).toBe(true);
+  });
+
+  it("is false in the middle of the closed overnight window", () => {
+    // 2026-06-19T01:00:00Z → 03:00 Madrid, every venue closed.
+    expect(expectFreshReading(new Date("2026-06-19T01:00:00Z"), 15)).toBe(false);
+  });
+
+  it("stays in the grace window just after opening", () => {
+    // 2026-06-19T05:05:00Z → 07:05 Madrid; looking back 15 min lands at 06:50,
+    // before the 07:00 opening, so no fresh reading is expected yet.
+    expect(expectFreshReading(new Date("2026-06-19T05:05:00Z"), 15)).toBe(false);
   });
 });

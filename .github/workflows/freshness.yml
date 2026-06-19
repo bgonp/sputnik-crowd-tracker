@@ -7,11 +7,11 @@ name: Data freshness
 
 on:
   schedule:
-    # Every 15 minutes, around the clock.
+    # Every 15 minutes, around the clock. The check is open-hours-aware
+    # (see scraper/src/open-hours.ts) and pauses staleness alerts when every
+    # venue is closed, so the scraper's overnight pause doesn't cause false
+    # alarms — no daytime-only cron window is needed.
     - cron: "*/15 * * * *"
-    # If the gym API goes quiet overnight and causes false alarms, swap the line
-    # above for a daytime-only window instead (≈09:00–22:00 Madrid):
-    #   - cron: "*/15 7-20 * * *"
   workflow_dispatch:
 
 jobs:

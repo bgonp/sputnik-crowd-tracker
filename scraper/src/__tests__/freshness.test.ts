@@ -46,4 +46,34 @@ describe("evaluateFreshness", () => {
     const r = evaluateFreshness(latest, NOW, 15);
     expect(r.stale).toBe(true);
   });
+
+  it("downgrades a stale verdict to OK when all venues are closed", () => {
+    const latest = new Date(NOW.getTime() - 30 * 60_000).toISOString(); // 30 min old
+    const r = evaluateFreshness(latest, NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(false);
+    expect(r.ageMinutes).toBe(30); // still reported, just not alarmed
+    expect(r.message).toMatch(/closed/);
+    expect(r.message).not.toMatch(/STALE/); // no contradictory "OK … STALE:" text
+  });
+
+  it("treats an empty database as OK when all venues are closed", () => {
+    const r = evaluateFreshness(null, NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(false);
+    expect(r.message).toMatch(/closed/);
+  });
+
+  it("still alarms on an unparseable timestamp even when all venues are closed", () => {
+    // Corrupted data is a real fault, not an expected overnight pause.
+    const r = evaluateFreshness("not-a-date", NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(true);
+    expect(r.message).toMatch(/^STALE/);
+  });
+
+  it("still reports fresh data as fresh while closed (no false 'closed' message)", () => {
+    const latest = new Date(NOW.getTime() - 2 * 60_000).toISOString();
+    const r = evaluateFreshness(latest, NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(false);
+    expect(r.message).toMatch(/^OK/);
+    expect(r.message).not.toMatch(/closed/);
+  });
 });

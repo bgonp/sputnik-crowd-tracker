@@ -81,13 +81,14 @@ sputnik-crowd-tracker/
 
 ### Phase 2 — Scraper
 TypeScript script using `tsx` to run directly in Actions:
+0. Skip the cycle entirely if every venue is currently closed (per-venue hours in `src/open-hours.ts`; the API exposes no hours, so they're maintained config)
 1. `GET` the gym page → extract CSRF token + session cookie
 2. `POST` to the occupancy endpoint
 3. Map Spanish API fields to English on ingest
 4. Generate a UUID per venue per reading
-5. Bulk insert all venue rows into Turso via `@libsql/client`
+5. Bulk insert the rows for venues that are open right now via `@libsql/client`
 
-Scheduled on the Raspberry Pi (cron or systemd timer) to run `pnpm scrape` every 60 seconds.
+Scheduled on the Raspberry Pi (cron or systemd timer) to run `pnpm scrape` every 60 seconds. Collecting only during open hours trims overnight reads/writes and keeps the `readings` table smaller.
 
 ### Phase 3 — Dashboard
 Next.js App Router with server components reading from Turso directly.

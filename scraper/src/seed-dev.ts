@@ -1,5 +1,6 @@
 import { createClient } from "@libsql/client";
 import { randomUUID } from "crypto";
+import { windowForVenue, type OpenWindow } from "./open-hours.js";
 
 const VENUES = [
   { id: 1, name: "Alcobendas Principal", capacity: 290, bias: 0.82 },
@@ -10,8 +11,9 @@ const VENUES = [
   { id: 6, name: "Guindalera Principal", capacity: 246, bias: 1.00 },
 ];
 
-const OPENING_HOUR = 7;
-const CLOSING_HOUR = 23;
+// Fallback window for any venue without a configured schedule, so the seeder
+// still produces data if VENUES and open-hours.ts drift apart.
+const FALLBACK_WINDOW: OpenWindow = { openMin: 7 * 60, closeMin: 23 * 60 };
 const BATCH_SIZE = 500;
 
 // Defaults reproduce the original ~90-day, 1-minute local dataset. Override via
@@ -115,7 +117,9 @@ async function main() {
   `);
   await db.execute("DELETE FROM readings");
 
-  const startMs = now.getTime() - DAYS * 24 * 60 * 60 * 1000;
+  // DAYS days ending *today* (inclusive): the last iteration lands on `now`'s
+  // date, generated partially up to the current time; earlier days are full.
+  const startMs = now.getTime() - (DAYS - 1) * 24 * 60 * 60 * 1000;
 
   let pending: Parameters<typeof db.batch>[0] = [];
   let total = 0;
@@ -135,12 +139,17 @@ async function main() {
     const day   = date.getUTCDate();
     const dow   = date.getUTCDay();
 
-    // Compute today's cutoff in Madrid hours (to stop generating future data)
-    const isToday = d === DAYS - 1;
-    const nowMadridHour = now.getUTCHours() + madridOffsetHours(now.getUTCMonth() + 1);
+    // Compute today's cutoff as a Madrid minute-of-day (to stop generating
+    // future data); past days run to each venue's own closing time. Match on the
+    // actual UTC date rather than the loop index so the cutoff tracks `now`.
+    const isToday =
+      year === now.getUTCFullYear() && month === now.getUTCMonth() + 1 && day === now.getUTCDate();
+    // Clamp to 23:xx: near midnight UTC the +1/+2 offset can push the Madrid
+    // hour to 24+, which would let the cutoff exceed the day and emit "future"
+    // readings for the last day.
+    const nowMadridHour = Math.min(23, now.getUTCHours() + madridOffsetHours(now.getUTCMonth() + 1));
     const nowMadridMin  = now.getUTCMinutes();
-    const cutoffHour    = isToday ? nowMadridHour : CLOSING_HOUR;
-    const cutoffMin     = isToday ? nowMadridMin  : 0;
+    const cutoffMinute  = isToday ? nowMadridHour * 60 + nowMadridMin : Number.POSITIVE_INFINITY;
 
     const prng = makePrng(year * 10000 + month * 100 + day);
     const dayFactor = 0.82 + prng() * 0.36; // ±18% daily variation
@@ -152,45 +161,48 @@ async function main() {
       let dailyEntries = 0;
       let dailyExits = 0;
 
-      for (let h = OPENING_HOUR; h < CLOSING_HOUR; h++) {
-        for (let m = 0; m < 60; m += INTERVAL_MIN) {
-          // Stop at today's current time
-          if (isToday && (h > cutoffHour || (h === cutoffHour && m >= cutoffMin))) break;
+      // Generate readings only within this venue's open window for the day —
+      // mirrors the scraper, which collects only while a venue is open.
+      const win = windowForVenue(venue.name, dow) ?? FALLBACK_WINDOW;
 
-          const target = baseOccupancy(dow, h, m) * venue.bias * dayFactor;
-          const noise  = (venuePrng() - 0.5) * 10;
-          currentPct   = clamp(currentPct + (target - currentPct) * 0.3 + noise, 0, 100);
-          const occ    = Math.round((currentPct / 100) * venue.capacity);
+      for (let minute = win.openMin; minute < win.closeMin; minute += INTERVAL_MIN) {
+        if (minute >= cutoffMinute) break; // stop at today's current time
+        const h = Math.floor(minute / 60);
+        const m = minute % 60;
 
-          // Cumulative entries/exits
-          const churn = Math.round(occ * 0.03 * venuePrng());
-          const delta = occ - prevOcc;
-          if (delta > 0) dailyEntries += delta + churn;
-          else           dailyExits   += -delta + churn;
+        const target = baseOccupancy(dow, h, m) * venue.bias * dayFactor;
+        const noise  = (venuePrng() - 0.5) * 10;
+        currentPct   = clamp(currentPct + (target - currentPct) * 0.3 + noise, 0, 100);
+        const occ    = Math.round((currentPct / 100) * venue.capacity);
 
-          prevOcc = occ;
+        // Cumulative entries/exits
+        const churn = Math.round(occ * 0.03 * venuePrng());
+        const delta = occ - prevOcc;
+        if (delta > 0) dailyEntries += delta + churn;
+        else           dailyExits   += -delta + churn;
 
-          pending.push({
-            sql: `INSERT INTO readings
-                    (id, timestamp, venue_id, venue_name, occupancy, entries, exits, capacity)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [
-              randomUUID(),
-              toUTC(year, month, day, h, m),
-              venue.id, venue.name,
-              occ, dailyEntries, dailyExits, venue.capacity,
-            ],
-          });
+        prevOcc = occ;
 
-          if (pending.length >= BATCH_SIZE) await flush();
-        }
+        pending.push({
+          sql: `INSERT INTO readings
+                  (id, timestamp, venue_id, venue_name, occupancy, entries, exits, capacity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            randomUUID(),
+            toUTC(year, month, day, h, m),
+            venue.id, venue.name,
+            occ, dailyEntries, dailyExits, venue.capacity,
+          ],
+        });
+
+        if (pending.length >= BATCH_SIZE) await flush();
       }
     }
   }
 
   await flush();
   console.log(`\n  Done — ${total.toLocaleString()} rows in ${OUT}`);
-  console.log(`  Covers ${DAYS} days, ${VENUES.length} venues, ${INTERVAL_MIN}-min intervals (${OPENING_HOUR}:00–${CLOSING_HOUR}:00 Madrid time)`);
+  console.log(`  Covers ${DAYS} days, ${VENUES.length} venues, ${INTERVAL_MIN}-min intervals (per-venue open hours, Madrid time)`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

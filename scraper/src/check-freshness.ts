@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 import type { Client } from "@libsql/client";
 import { createDbClient } from "./db.js";
 import { evaluateFreshness, DEFAULT_THRESHOLD_MINUTES, type FreshnessResult } from "./freshness.js";
+import { madridMoment, anyVenueOpenAt } from "./open-hours.js";
 
 /**
  * Resolve the staleness threshold from `FRESHNESS_THRESHOLD_MINUTES`, falling
@@ -26,10 +27,23 @@ export async function checkFreshness(
   client: Client,
   now: Date,
   thresholdMinutes: number,
+  expectedOpen = true,
 ): Promise<FreshnessResult> {
   const result = await client.execute("SELECT MAX(timestamp) AS latest FROM readings");
   const latest = (result.rows[0]?.["latest"] as string | null | undefined) ?? null;
-  return evaluateFreshness(latest, now, thresholdMinutes);
+  return evaluateFreshness(latest, now, thresholdMinutes, expectedOpen);
+}
+
+/**
+ * Whether a fresh reading is expected right now: true if any venue was open
+ * `thresholdMinutes` ago. Looking back by the threshold provides a grace window
+ * at the open boundary — just after a venue opens, the last reading is still
+ * legitimately from the previous evening, so we don't alarm until the scraper
+ * has had a full threshold to land a new one.
+ */
+export function expectFreshReading(now: Date, thresholdMinutes: number): boolean {
+  const graceMoment = madridMoment(new Date(now.getTime() - thresholdMinutes * 60_000));
+  return anyVenueOpenAt(graceMoment);
 }
 
 /* v8 ignore start -- CLI glue: wires real deps, logs, and sets the exit code;
@@ -41,7 +55,8 @@ async function run(): Promise<void> {
   const now = nowEnv ? new Date(nowEnv) : new Date();
   if (!Number.isFinite(now.getTime())) throw new Error(`Invalid MOCK_NOW="${nowEnv}"`);
 
-  const freshness = await checkFreshness(createDbClient(), now, thresholdMinutes);
+  const expectedOpen = expectFreshReading(now, thresholdMinutes);
+  const freshness = await checkFreshness(createDbClient(), now, thresholdMinutes, expectedOpen);
   console.log(freshness.message);
 
   // Exit non-zero on staleness so the scheduled GitHub Action fails and
