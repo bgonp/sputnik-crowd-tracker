@@ -53,6 +53,7 @@ describe("evaluateFreshness", () => {
     expect(r.stale).toBe(false);
     expect(r.ageMinutes).toBe(30); // still reported, just not alarmed
     expect(r.message).toMatch(/closed/);
+    expect(r.message).not.toMatch(/STALE/); // no contradictory "OK … STALE:" text
   });
 
   it("treats an empty database as OK when all venues are closed", () => {

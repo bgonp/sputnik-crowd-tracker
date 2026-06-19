@@ -127,6 +127,12 @@ export function madridMoment(now: Date): MadridMoment {
  * Whether a specific venue is open at the given Madrid moment. Venues with no
  * configured schedule default to **open** (fail-safe: keep collecting rather
  * than silently dropping a venue we don't recognize).
+ *
+ * Note this fail-safe only applies once a venue has been fetched (the per-venue
+ * insert filter). The global skip gate (`anyVenueOpenAt`) considers only known
+ * venues, so a brand-new venue is still not discovered during a window where
+ * every known venue is closed — it surfaces on the next cycle a known venue is
+ * open. In practice the configured set already covers all venues the API returns.
  */
 export function isVenueOpenAt(venueName: string, moment: MadridMoment): boolean {
   const schedule = VENUE_SCHEDULES[normalizeVenueName(venueName)];

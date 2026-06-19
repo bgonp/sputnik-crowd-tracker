@@ -89,9 +89,13 @@ changes its schedule). On each run the scraper:
    are individually open right now (venues open later / close earlier than one
    another, so the day's edges are trimmed per-venue).
 
-An unrecognized venue (no configured schedule) is treated as **open** — fail-safe,
-so a newly added venue keeps being collected rather than silently dropped. Hours
-are Madrid local; public holidays are not modeled (Sunday hours stand in).
+An unrecognized venue (no configured schedule) is treated as **open** by the
+per-venue insert filter (step 2) — fail-safe, so it isn't silently dropped once
+fetched. The global skip in step 1 only knows the configured venues, though, so
+a brand-new venue isn't discovered during a window where every known venue is
+closed; it surfaces on the next cycle a known venue is open (the configured set
+already covers every venue the API returns). Hours are Madrid local; public
+holidays are not modeled (Sunday hours stand in).
 
 The freshness monitor (`check-freshness.ts`) shares this logic and pauses its
 staleness alerts during closed windows, so the nightly pause is not a false alarm.

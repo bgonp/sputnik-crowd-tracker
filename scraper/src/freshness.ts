@@ -26,10 +26,18 @@ export function evaluateFreshness(
 ): FreshnessResult {
   const result = evaluateAge(latest, now, thresholdMinutes);
   if (!expectedOpen && result.stale) {
+    // Regenerate the message rather than embedding the STALE one, so the output
+    // doesn't read as a contradictory "OK … STALE: …".
+    const detail =
+      result.ageMinutes != null
+        ? `latest reading is ${result.ageMinutes} min old`
+        : result.latest
+          ? `latest reading timestamp could not be parsed`
+          : `no readings yet`;
     return {
       ...result,
       stale: false,
-      message: `OK (all venues closed): staleness checks paused — ${result.message}`,
+      message: `OK (all venues closed): ${detail} — staleness checks paused during closed hours.`,
     };
   }
   return result;

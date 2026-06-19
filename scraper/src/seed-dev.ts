@@ -140,7 +140,10 @@ async function main() {
     // Compute today's cutoff as a Madrid minute-of-day (to stop generating
     // future data); past days run to each venue's own closing time.
     const isToday = d === DAYS - 1;
-    const nowMadridHour = now.getUTCHours() + madridOffsetHours(now.getUTCMonth() + 1);
+    // Clamp to 23:xx: near midnight UTC the +1/+2 offset can push the Madrid
+    // hour to 24+, which would let the cutoff exceed the day and emit "future"
+    // readings for the last day.
+    const nowMadridHour = Math.min(23, now.getUTCHours() + madridOffsetHours(now.getUTCMonth() + 1));
     const nowMadridMin  = now.getUTCMinutes();
     const cutoffMinute  = isToday ? nowMadridHour * 60 + nowMadridMin : Number.POSITIVE_INFINITY;
 
