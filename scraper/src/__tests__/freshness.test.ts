@@ -46,4 +46,26 @@ describe("evaluateFreshness", () => {
     const r = evaluateFreshness(latest, NOW, 15);
     expect(r.stale).toBe(true);
   });
+
+  it("downgrades a stale verdict to OK when all venues are closed", () => {
+    const latest = new Date(NOW.getTime() - 30 * 60_000).toISOString(); // 30 min old
+    const r = evaluateFreshness(latest, NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(false);
+    expect(r.ageMinutes).toBe(30); // still reported, just not alarmed
+    expect(r.message).toMatch(/closed/);
+  });
+
+  it("treats an empty database as OK when all venues are closed", () => {
+    const r = evaluateFreshness(null, NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(false);
+    expect(r.message).toMatch(/closed/);
+  });
+
+  it("still reports fresh data as fresh while closed (no false 'closed' message)", () => {
+    const latest = new Date(NOW.getTime() - 2 * 60_000).toISOString();
+    const r = evaluateFreshness(latest, NOW, 15, /* expectedOpen */ false);
+    expect(r.stale).toBe(false);
+    expect(r.message).toMatch(/^OK/);
+    expect(r.message).not.toMatch(/closed/);
+  });
 });
