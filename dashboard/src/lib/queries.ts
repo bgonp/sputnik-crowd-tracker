@@ -64,6 +64,12 @@ export interface DailyVisitorCount {
   total: number;
 }
 
+/** True for a "no such table" error — the only case the venue queries tolerate
+ *  (the table hasn't been migrated yet). Anything else is a real failure. */
+function isMissingTableError(err: unknown): boolean {
+  return err instanceof Error && /no such table/i.test(err.message);
+}
+
 export async function getVenues(): Promise<Venue[]> {
   // Prefer the venue master table (a tiny read). Fall back to scanning readings
   // when it's empty or not migrated yet (e.g. before `sync-venues` has run), so
@@ -71,8 +77,8 @@ export async function getVenues(): Promise<Venue[]> {
   try {
     const result = await db.execute("SELECT venue_id AS id, name FROM venues ORDER BY venue_id");
     if (result.rows.length > 0) return toPlain<Venue>(result.rows);
-  } catch {
-    // venues table doesn't exist yet — fall through to the readings scan.
+  } catch (err) {
+    if (!isMissingTableError(err)) throw err; // don't mask real failures
   }
   const fallback = await db.execute(
     "SELECT DISTINCT venue_id AS id, venue_name AS name FROM readings ORDER BY venue_id"
@@ -81,14 +87,15 @@ export async function getVenues(): Promise<Venue[]> {
 }
 
 export async function getVenueHours(): Promise<VenueHours[]> {
-  // Returns [] when the table is absent/empty; openStatusFor then treats every
-  // venue as open (fail-safe), so live data still shows during the rollout.
+  // Returns [] when the table hasn't been migrated yet; openStatusFor then treats
+  // every venue as open (fail-safe), so live data still shows during the rollout.
   try {
     const result = await db.execute(
       "SELECT venue_id AS venueId, dow, open_min AS openMin, close_min AS closeMin FROM venue_hours"
     );
     return toPlain<VenueHours>(result.rows);
-  } catch {
+  } catch (err) {
+    if (!isMissingTableError(err)) throw err; // don't mask real failures as "all open"
     return [];
   }
 }

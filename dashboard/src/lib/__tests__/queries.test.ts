@@ -222,6 +222,12 @@ describe("getVenues", () => {
     const venues = await getVenues();
     expect(venues).toEqual([{ id: 2, name: "Las Rozas Principal" }]);
   });
+
+  it("rethrows unexpected errors instead of silently falling back", async () => {
+    vi.mocked(db.execute).mockRejectedValueOnce(new Error("SQLITE_AUTH: not authorized"));
+    await expect(getVenues()).rejects.toThrow(/not authorized/);
+    expect(vi.mocked(db.execute)).toHaveBeenCalledTimes(1); // no fallback scan
+  });
 });
 
 describe("getVenueHours", () => {
@@ -243,5 +249,10 @@ describe("getVenueHours", () => {
   it("returns an empty array when the table does not exist yet", async () => {
     vi.mocked(db.execute).mockRejectedValueOnce(new Error("no such table: venue_hours"));
     expect(await getVenueHours()).toEqual([]);
+  });
+
+  it("rethrows unexpected errors instead of masking them as 'no hours'", async () => {
+    vi.mocked(db.execute).mockRejectedValueOnce(new Error("SQLITE_IOERR: disk I/O error"));
+    await expect(getVenueHours()).rejects.toThrow(/disk I\/O/);
   });
 });

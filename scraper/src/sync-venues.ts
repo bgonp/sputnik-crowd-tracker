@@ -69,13 +69,19 @@ export function buildVenueSyncPlan(observed: ObservedVenue[], updatedAt: string)
   return { venues, hours, unknown };
 }
 
-/** Read the distinct venues seen in `readings`, newest capacity per venue. */
+/**
+ * Read each venue's name + capacity from its **newest** reading. Joining on the
+ * per-venue MAX(timestamp) (rather than a bare GROUP BY) means name/capacity
+ * reflect the latest state, not an arbitrary or highest-capacity row.
+ */
 export async function readObservedVenues(client: Client): Promise<ObservedVenue[]> {
   const result = await client.execute(`
-    SELECT venue_id AS venueId, venue_name AS name, MAX(capacity) AS capacity
-    FROM readings
-    GROUP BY venue_id
-    ORDER BY venue_id
+    SELECT r.venue_id AS venueId, r.venue_name AS name, r.capacity AS capacity
+    FROM readings r
+    JOIN (
+      SELECT venue_id, MAX(timestamp) AS ts FROM readings GROUP BY venue_id
+    ) latest ON latest.venue_id = r.venue_id AND latest.ts = r.timestamp
+    ORDER BY r.venue_id
   `);
   return result.rows.map((r) => ({
     venueId: Number(r["venueId"]),
