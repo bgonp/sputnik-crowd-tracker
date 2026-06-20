@@ -14,8 +14,9 @@
 #
 # It serializes against concurrent runs with a non-blocking flock so it never
 # updates the worktree / node_modules underneath a scrape. Wrap the scrape cron
-# with the SAME lock so the two never overlap, e.g.:
-#   * * * * * flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
+# with the SAME lock so the two never overlap. cron's PATH is minimal, so prefix
+# the scrape line with one that includes pnpm (adjust to where pnpm lives):
+#   * * * * * PATH=/home/pi/.local/share/pnpm:/usr/local/bin:/usr/bin flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
 #
 # Install (point it at your checkout — either edit the REPO_DIR default below or
 # export SPUTNIK_REPO_DIR), then add to `crontab -e`:
@@ -38,7 +39,7 @@ fi
 # cron runs with a minimal PATH; point it at the same node/pnpm your scrape cron
 # uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
 # with :- so an unset var can't trip `set -u`.
-export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin:${PATH:-}"
+export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin${PATH:+:$PATH}"
 
 cd "$REPO_DIR"
 git fetch --quiet origin "$BRANCH"
