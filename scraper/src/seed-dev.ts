@@ -1,6 +1,7 @@
 import { createClient } from "@libsql/client";
 import { randomUUID } from "crypto";
 import { windowForVenue, type OpenWindow } from "./open-hours.js";
+import { buildVenueSyncPlan } from "./sync-venues.js";
 
 const VENUES = [
   { id: 1, name: "Alcobendas Principal", capacity: 290, bias: 0.82 },
@@ -117,6 +118,28 @@ async function main() {
   `);
   await db.execute("DELETE FROM readings");
 
+  // Mirror migrate.ts so the dashboard's venue + hours queries work against the
+  // local/preview fixture too.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS venues (
+      venue_id   INTEGER PRIMARY KEY,
+      name       TEXT    NOT NULL,
+      capacity   INTEGER,
+      updated_at TEXT
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS venue_hours (
+      venue_id  INTEGER NOT NULL,
+      dow       INTEGER NOT NULL,
+      open_min  INTEGER NOT NULL,
+      close_min INTEGER NOT NULL,
+      PRIMARY KEY (venue_id, dow)
+    )
+  `);
+  await db.execute("DELETE FROM venues");
+  await db.execute("DELETE FROM venue_hours");
+
   // DAYS days ending *today* (inclusive): the last iteration lands on `now`'s
   // date, generated partially up to the current time; earlier days are full.
   const startMs = now.getTime() - (DAYS - 1) * 24 * 60 * 60 * 1000;
@@ -201,8 +224,30 @@ async function main() {
   }
 
   await flush();
+
+  // Populate the venue master + hours tables from the same config the scraper
+  // uses, reusing the production sync logic.
+  const plan = buildVenueSyncPlan(
+    VENUES.map((v) => ({ venueId: v.id, name: v.name, capacity: v.capacity })),
+    now.toISOString(),
+  );
+  await db.batch(
+    [
+      ...plan.venues.map((v) => ({
+        sql: `INSERT INTO venues (venue_id, name, capacity, updated_at) VALUES (?, ?, ?, ?)`,
+        args: [v.venueId, v.name, v.capacity, v.updatedAt],
+      })),
+      ...plan.hours.map((h) => ({
+        sql: `INSERT INTO venue_hours (venue_id, dow, open_min, close_min) VALUES (?, ?, ?, ?)`,
+        args: [h.venueId, h.dow, h.openMin, h.closeMin],
+      })),
+    ],
+    "write",
+  );
+
   console.log(`\n  Done — ${total.toLocaleString()} rows in ${OUT}`);
   console.log(`  Covers ${DAYS} days, ${VENUES.length} venues, ${INTERVAL_MIN}-min intervals (per-venue open hours, Madrid time)`);
+  console.log(`  Seeded ${plan.venues.length} venues + ${plan.hours.length} venue_hours rows`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
