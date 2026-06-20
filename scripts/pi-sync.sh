@@ -12,10 +12,12 @@
 # `sync-venues` write to Turso and are rare/sensitive, so run them by hand after a
 # deploy that touches the schema (the dashboard degrades gracefully until you do).
 #
-# It serializes against concurrent runs with a non-blocking flock so it never
-# updates the worktree / node_modules underneath a scrape. Wrap the scrape cron
-# with the SAME lock so the two never overlap. cron's PATH is minimal, so prefix
-# the scrape line with one that includes pnpm (adjust to where pnpm lives):
+# When `flock` is available (standard on Raspberry Pi OS / util-linux) it takes a
+# non-blocking lock so it never updates the worktree / node_modules underneath a
+# scrape; without flock it runs unlocked (so install util-linux for that
+# protection). Wrap the scrape cron with the SAME lock so the two never overlap.
+# cron's PATH is minimal, so prefix the scrape line with one that includes pnpm
+# (adjust to where pnpm lives):
 #   * * * * * PATH=/home/pi/.local/share/pnpm:/usr/local/bin:/usr/bin flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
 #
 # Install (point it at your checkout — either edit the REPO_DIR default below or
