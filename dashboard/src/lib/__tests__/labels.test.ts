@@ -79,7 +79,13 @@ describe("typicalAverageLabel", () => {
     expect(typicalAverageLabel(4, 2)).toBe("Media de 2 viernes");
   });
 
-  it("falls back to a generic noun for an out-of-range index", () => {
+  it("uses the singular weekday when weeks === 1", () => {
+    expect(typicalAverageLabel(5, 1)).toBe("Media de 1 sábado");
+    expect(typicalAverageLabel(0, 1)).toBe("Media de 1 lunes");
+  });
+
+  it("falls back to a generic noun, singular or plural by count", () => {
     expect(typicalAverageLabel(99, 5)).toBe("Media de 5 días");
+    expect(typicalAverageLabel(99, 1)).toBe("Media de 1 día");
   });
 });

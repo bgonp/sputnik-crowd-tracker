@@ -19,7 +19,8 @@ export const TODAY_LABEL = "Hoy";
 
 /** "Media de 5 sábados" — label for the same-weekday baseline line. */
 export function typicalAverageLabel(mondayIndexedDay: number, weeks: number): string {
-  const day = FULL_DAY_LABELS[mondayIndexedDay] ?? "días";
+  const day = FULL_DAY_LABELS[mondayIndexedDay] ?? "día";
+  if (weeks === 1) return `Media de 1 ${day}`;
   // Spanish weekday plurals: only those ending in a vowel take an "-s"
   // (sábado→sábados, domingo→domingos); lunes…viernes are invariable.
   const plural = day.endsWith("s") ? day : `${day}s`;
