@@ -60,7 +60,8 @@ export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Pr
           }
         />
         <ChartLegend content={<ChartLegendContent />} />
-        {/* Baseline first so today's live line draws on top of it. */}
+        {/* Baseline first so today's live line draws on top of it. Gaps are
+            left unconnected so a missing baseline bucket isn't drawn as a value. */}
         <Line
           dataKey="typical"
           name="typical"
@@ -69,7 +70,7 @@ export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Pr
           strokeWidth={1.5}
           strokeDasharray="4 3"
           dot={false}
-          connectNulls
+          connectNulls={false}
           opacity={0.6}
           isAnimationActive={false}
         />

@@ -6,14 +6,21 @@ export const TYPICAL_WEEKS = 5;
 /** Time-of-day bucket width (minutes) used to align today with the baseline. */
 export const BUCKET_MINUTES = 15;
 
-/** `YYYY-MM-DD` for `now` in Europe/Madrid (en-CA renders ISO order). */
+/**
+ * `YYYY-MM-DD` for `now` in Europe/Madrid. Assembled from `formatToParts` so it
+ * doesn't depend on any locale's date ordering (e.g. en-CA's ISO output), which
+ * isn't guaranteed across ICU builds and feeds the date filter in the queries.
+ */
 export function madridDateString(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Madrid",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
+  }).formatToParts(now);
+  const part = (type: "year" | "month" | "day") =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 /**
