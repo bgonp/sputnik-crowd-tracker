@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import {
   getVenues,
+  getVenueHours,
   getLiveReadings,
   getTodayVisitorCounts,
   getHeatmap,
@@ -8,6 +9,11 @@ import {
 } from "./queries";
 
 export const getCachedVenues = unstable_cache(getVenues, ["venues"], {
+  revalidate: 3600,
+});
+
+// Opening hours change rarely — cache for an hour like the venue list.
+export const getCachedVenueHours = unstable_cache(getVenueHours, ["venue-hours"], {
   revalidate: 3600,
 });
 

@@ -18,6 +18,13 @@ export interface Venue {
   name: string;
 }
 
+export interface VenueHours {
+  venueId: number;
+  dow: number; // 0 = Sunday … 6 = Saturday
+  openMin: number; // minutes from local midnight, Madrid time
+  closeMin: number;
+}
+
 export interface HeatmapCell {
   day: number;   // 0 = Monday … 6 = Sunday
   hour: number;  // 0–23
@@ -58,10 +65,32 @@ export interface DailyVisitorCount {
 }
 
 export async function getVenues(): Promise<Venue[]> {
-  const result = await db.execute(
+  // Prefer the venue master table (a tiny read). Fall back to scanning readings
+  // when it's empty or not migrated yet (e.g. before `sync-venues` has run), so
+  // the dashboard never goes venue-less during the rollout.
+  try {
+    const result = await db.execute("SELECT venue_id AS id, name FROM venues ORDER BY venue_id");
+    if (result.rows.length > 0) return toPlain<Venue>(result.rows);
+  } catch {
+    // venues table doesn't exist yet — fall through to the readings scan.
+  }
+  const fallback = await db.execute(
     "SELECT DISTINCT venue_id AS id, venue_name AS name FROM readings ORDER BY venue_id"
   );
-  return toPlain<Venue>(result.rows);
+  return toPlain<Venue>(fallback.rows);
+}
+
+export async function getVenueHours(): Promise<VenueHours[]> {
+  // Returns [] when the table is absent/empty; openStatusFor then treats every
+  // venue as open (fail-safe), so live data still shows during the rollout.
+  try {
+    const result = await db.execute(
+      "SELECT venue_id AS venueId, dow, open_min AS openMin, close_min AS closeMin FROM venue_hours"
+    );
+    return toPlain<VenueHours>(result.rows);
+  } catch {
+    return [];
+  }
 }
 
 export async function getLiveReadings(): Promise<LiveReading[]> {
