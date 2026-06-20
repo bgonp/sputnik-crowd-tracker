@@ -4,13 +4,18 @@
 #
 # The Pi is a deploy target (it only runs the scraper), not a dev box, so this
 # force-matches origin/main rather than merging. Untracked files (your .env) are
-# left untouched. Dependencies are reinstalled only when pnpm-lock.yaml actually
-# changed (the canonical signal for any workspace), so the common "nothing new"
-# path is just a quick fetch-and-exit.
+# left untouched. The scraper's deps are reinstalled only when pnpm-lock.yaml
+# actually changed (the canonical signal), so the common "nothing new" path is
+# just a quick fetch-and-exit.
 #
 # Schema/data steps are deliberately NOT automated here — `migrate` and
 # `sync-venues` write to Turso and are rare/sensitive, so run them by hand after a
 # deploy that touches the schema (the dashboard degrades gracefully until you do).
+#
+# It serializes against concurrent runs with a non-blocking flock so it never
+# updates the worktree / node_modules underneath a scrape. Wrap the scrape cron
+# with the SAME lock so the two never overlap, e.g.:
+#   * * * * * flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
 #
 # Install (point it at your checkout — either edit the REPO_DIR default below or
 # export SPUTNIK_REPO_DIR), then add to `crontab -e`:
@@ -20,6 +25,15 @@ set -euo pipefail
 
 REPO_DIR="${SPUTNIK_REPO_DIR:-/home/pi/sputnik-crowd-tracker}"
 BRANCH="main"
+LOCK="${SPUTNIK_LOCK:-/tmp/sputnik.lock}"
+
+# Serialize against other sputnik jobs (other syncs, and the scrape cron if you
+# wrap it with the same lock) so a reset/install never lands under a running
+# scrape. Non-blocking: if something else holds the lock, skip this round.
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK"
+  flock -n 9 || { echo "$(date -Is) another sputnik job holds the lock — skipping this sync"; exit 0; }
+fi
 
 # cron runs with a minimal PATH; point it at the same node/pnpm your scrape cron
 # uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
@@ -46,8 +60,9 @@ deps_changed=$(git diff --name-only "$local_rev" "$remote_rev" -- pnpm-lock.yaml
 git reset --hard "origin/$BRANCH"
 
 if [ -n "$deps_changed" ]; then
-  echo "$(date -Is) dependency manifests changed — running pnpm install"
-  pnpm install --frozen-lockfile
+  # The Pi only runs the scraper, so install just that workspace's deps.
+  echo "$(date -Is) pnpm-lock.yaml changed — installing scraper deps"
+  pnpm install --frozen-lockfile --filter scraper
 fi
 
 echo "$(date -Is) now at $(git rev-parse --short HEAD)"
