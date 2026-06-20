@@ -7,6 +7,7 @@
     "seed-dev": "tsx --env-file-if-exists=.env src/seed-dev.ts",
     "seed-preview": "SEED_OUT=file:../dashboard/preview.db SEED_DAYS=14 SEED_INTERVAL_MIN=5 tsx --env-file-if-exists=.env src/seed-dev.ts",
     "check-freshness": "tsx --env-file-if-exists=.env src/check-freshness.ts",
+    "sync-venues": "tsx --env-file-if-exists=.env src/sync-venues.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
