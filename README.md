@@ -175,6 +175,7 @@ secret (freshness Action, read-only).
 
 - **Dashboard** → Vercel (connect the repo; set `TURSO_URL` + `TURSO_AUTH_TOKEN` env vars).
 - **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso. It only collects while venues are open (hours in `scraper/src/open-hours.ts`): when every venue is closed it skips the cycle entirely, and otherwise inserts only the venues currently open. This cuts overnight writes and keeps the readings table smaller. The cron still fires every 60s — the gate is a cheap early-exit, so no schedule change is needed on the Pi.
+- **Keeping the Pi current** → `scripts/pi-sync.sh` force-syncs the Pi's checkout to `origin/main` (and reinstalls deps only when the lockfile/`package.json` changed). Add it to cron alongside the scrape job — e.g. every 15 min: `*/15 * * * * /home/pi/sputnik-crowd-tracker/scripts/pi-sync.sh >> /home/pi/sputnik-sync.log 2>&1`. It's a deploy-target sync (hard reset to `origin/main`; your untracked `.env` is left alone), so don't keep local commits on the Pi. Schema/migration steps stay manual.
 - **Visitor analytics** → [Vercel Web Analytics](https://vercel.com/docs/analytics) is wired in via the `<Analytics />` component in `dashboard/src/app/layout.tsx`. It's cookieless (no consent banner required) and needs no env vars — just enable Web Analytics for the project in the Vercel dashboard.
 
 ### Preview deployments (don't spend Turso reads)
