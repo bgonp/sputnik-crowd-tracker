@@ -12,7 +12,8 @@
 # `sync-venues` write to Turso and are rare/sensitive, so run them by hand after a
 # deploy that touches the schema (the dashboard degrades gracefully until you do).
 #
-# Install (adjust REPO_DIR to your checkout), then add to `crontab -e`:
+# Install (point it at your checkout — either edit the REPO_DIR default below or
+# export SPUTNIK_REPO_DIR), then add to `crontab -e`:
 #   */15 * * * * /home/pi/sputnik-crowd-tracker/scripts/pi-sync.sh >> /home/pi/sputnik-sync.log 2>&1
 
 set -euo pipefail
@@ -33,8 +34,10 @@ remote_rev=$(git rev-parse "origin/$BRANCH")
 
 echo "$(date -Is) syncing ${local_rev:0:7} -> ${remote_rev:0:7}"
 
-# Decide whether deps need reinstalling before moving HEAD.
-deps_changed=$(git diff --name-only "$local_rev" "$remote_rev" -- pnpm-lock.yaml '**/package.json')
+# Decide whether deps need reinstalling before moving HEAD. Plain `git diff`
+# (no --exit-code) returns 0 even when there are differences, but guard with
+# `|| true` so a non-zero from any git quirk can't trip `set -e` here.
+deps_changed=$(git diff --name-only "$local_rev" "$remote_rev" -- pnpm-lock.yaml '**/package.json' || true)
 
 git reset --hard "origin/$BRANCH"
 
