@@ -8,7 +8,7 @@ You are working on **Sputnik Crowd Tracker**, a personal side project that track
 
 ## What the project does
 
-A scraper polls the gym's public occupancy API every 60 seconds and stores one row per venue per reading in a database. A Next.js dashboard reads that accumulated history and renders charts (heatmap, hourly averages, live status) so a user can tell the best and worst times to visit each venue. (The 30-day time-series and per-day-of-week charts are temporarily parked to reduce Turso reads — their tested queries remain in `queries.ts` for a future revisit.)
+A scraper polls the gym's public occupancy API every 60 seconds and stores one row per venue per reading in a database. A Next.js dashboard reads that accumulated history and renders charts (heatmap, hourly averages, a today-vs-same-weekday line chart, live status) so a user can tell the best and worst times to visit each venue. (The 30-day time-series and per-day-of-week charts are temporarily parked to reduce Turso reads — their tested queries remain in `queries.ts` for a future revisit.)
 
 ## Architecture (3 parts, pnpm monorepo)
 

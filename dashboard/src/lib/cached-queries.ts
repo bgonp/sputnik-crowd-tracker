@@ -6,6 +6,7 @@ import {
   getTodayVisitorCounts,
   getHeatmap,
   getHourlyAverages,
+  getTodayVsTypical,
 } from "./queries";
 
 export const getCachedVenues = unstable_cache(getVenues, ["venues"], {
@@ -37,4 +38,12 @@ export const getCachedHourlyAverages = unstable_cache(
   getHourlyAverages,
   ["hourly-averages"],
   { revalidate: 300 }
+);
+
+// Carries today's live line, so it tracks the 60s refresh cadence. The nowIso
+// (rounded to the minute by the caller) is part of the cache key.
+export const getCachedTodayVsTypical = unstable_cache(
+  (venueId: number, nowIso: string) => getTodayVsTypical(venueId, new Date(nowIso)),
+  ["today-vs-typical"],
+  { revalidate: 60 }
 );

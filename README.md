@@ -65,6 +65,7 @@ sputnik-crowd-tracker/
 │           ├── queries.ts     # SQL queries (Madrid-timezone aware)
 │           ├── cached-queries.ts  # unstable_cache wrappers
 │           ├── open-status.ts # "open now? / next opening" from venue_hours
+│           ├── today-vs-typical.ts # same-weekday baseline date math + chart series
 │           ├── venues.ts      # venue name → URL slug helpers
 │           └── labels.ts      # Spanish day/hour labels
 ├── PLAN.md                   # original project plan (some parts aspirational)
