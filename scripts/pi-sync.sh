@@ -30,6 +30,12 @@ REPO_DIR="${SPUTNIK_REPO_DIR:-/home/pi/sputnik-crowd-tracker}"
 BRANCH="main"
 LOCK="${SPUTNIK_LOCK:-/tmp/sputnik.lock}"
 
+# cron runs with a minimal PATH; point it at the same node/pnpm your scrape cron
+# uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
+# with :- so an unset var can't trip `set -u`. Done before the flock check below
+# so `command -v flock` can resolve /usr/bin/flock even under a minimal cron PATH.
+export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin${PATH:+:$PATH}"
+
 # Serialize against other sputnik jobs (other syncs, and the scrape cron if you
 # wrap it with the same lock) so a reset/install never lands under a running
 # scrape. Non-blocking: if something else holds the lock, skip this round.
@@ -37,11 +43,6 @@ if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCK"
   flock -n 9 || { echo "$(date -Is) another sputnik job holds the lock — skipping this sync"; exit 0; }
 fi
-
-# cron runs with a minimal PATH; point it at the same node/pnpm your scrape cron
-# uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
-# with :- so an unset var can't trip `set -u`.
-export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin${PATH:+:$PATH}"
 
 cd "$REPO_DIR"
 git fetch --quiet origin "$BRANCH"
