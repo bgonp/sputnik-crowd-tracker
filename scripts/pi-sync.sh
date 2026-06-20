@@ -22,8 +22,9 @@ REPO_DIR="${SPUTNIK_REPO_DIR:-/home/pi/sputnik-crowd-tracker}"
 BRANCH="main"
 
 # cron runs with a minimal PATH; point it at the same node/pnpm your scrape cron
-# uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere).
-export PATH="${SPUTNIK_PNPM_PATH:-$HOME/.local/share/pnpm}:/usr/local/bin:/usr/bin:$PATH"
+# uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
+# with :- so an unset var can't trip `set -u`.
+export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin:${PATH:-}"
 
 cd "$REPO_DIR"
 git fetch --quiet origin "$BRANCH"
@@ -34,10 +35,13 @@ remote_rev=$(git rev-parse "origin/$BRANCH")
 
 echo "$(date -Is) syncing ${local_rev:0:7} -> ${remote_rev:0:7}"
 
-# Decide whether deps need reinstalling before moving HEAD. Plain `git diff`
-# (no --exit-code) returns 0 even when there are differences, but guard with
-# `|| true` so a non-zero from any git quirk can't trip `set -e` here.
-deps_changed=$(git diff --name-only "$local_rev" "$remote_rev" -- pnpm-lock.yaml '**/package.json' || true)
+# Decide whether deps need reinstalling before moving HEAD. pnpm-lock.yaml is the
+# canonical signal — any real dependency change updates it (and a package.json
+# edit that didn't would fail `--frozen-lockfile` anyway), so a single lockfile
+# check covers root + every workspace without fragile package.json globbing.
+# Plain `git diff` (no --exit-code) returns 0 even with differences; `|| true`
+# keeps any git quirk from tripping `set -e`.
+deps_changed=$(git diff --name-only "$local_rev" "$remote_rev" -- pnpm-lock.yaml || true)
 
 git reset --hard "origin/$BRANCH"
 
