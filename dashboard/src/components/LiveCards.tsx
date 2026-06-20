@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { DailyVisitorCount, LiveReading } from "@/lib/queries";
+import type { DailyVisitorCount, LiveReading, VenueHours } from "@/lib/queries";
+import { openStatusFor, type MadridMoment } from "@/lib/open-status";
 import { shortVenueName, venueSlug } from "@/lib/venues";
 
 function occupancyColor(pct: number): React.CSSProperties {
@@ -15,11 +16,15 @@ function occupancyColor(pct: number): React.CSSProperties {
 interface Props {
   readings: LiveReading[];
   todayCounts: DailyVisitorCount[];
+  // Per-venue opening hours; empty when not yet synced (venues then read as open).
+  venueHours: VenueHours[];
+  // Current Madrid moment, computed server-side so SSR and client agree.
+  nowMoment: MadridMoment;
   // Undefined on the all-venues overview (`/`), where no card is highlighted.
   selectedId?: number;
 }
 
-export function LiveCards({ readings, todayCounts, selectedId }: Props) {
+export function LiveCards({ readings, todayCounts, venueHours, nowMoment, selectedId }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -51,6 +56,7 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
         const todayTotal = countByVenue.get(r.venueId);
         const isSelected = r.venueId === activeId;
         const isLoading = r.venueId === pendingId && isPending;
+        const status = openStatusFor(venueHours, r.venueId, nowMoment);
         return (
           <Card
             key={r.venueId}
@@ -77,16 +83,29 @@ export function LiveCards({ readings, todayCounts, selectedId }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold" style={occupancyColor(r.percentage)}>
-                {r.percentage}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {r.occupancy} / {r.capacity} personas
-              </p>
-              {todayTotal != null && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {todayTotal} visitas hoy
-                </p>
+              {status.open ? (
+                <>
+                  <p className="text-3xl font-bold" style={occupancyColor(r.percentage)}>
+                    {r.percentage}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {r.occupancy} / {r.capacity} personas
+                  </p>
+                  {todayTotal != null && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {todayTotal} visitas hoy
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-muted-foreground">Cerrado</p>
+                  {status.opensAt && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Abre a las {status.opensAt}
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

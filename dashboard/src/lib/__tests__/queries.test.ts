@@ -9,6 +9,7 @@ import {
   getTodayVisitorCounts,
   getLiveReadings,
   getVenues,
+  getVenueHours,
   madridOffsetModifier,
 } from "../queries";
 
@@ -188,7 +189,7 @@ describe("getLiveReadings", () => {
 // --- getVenues ---
 
 describe("getVenues", () => {
-  it("returns the distinct venue id/name rows", async () => {
+  it("returns rows from the venues table when it is populated", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(
       fakeResult([
         { id: 1, name: "Alcobendas Principal" },
@@ -200,13 +201,58 @@ describe("getVenues", () => {
       { id: 1, name: "Alcobendas Principal" },
       { id: 2, name: "Las Rozas Principal" },
     ]);
+    expect(vi.mocked(db.execute).mock.calls[0]?.[0]).toMatch(/FROM venues/i);
   });
 
-  it("queries distinct venues ordered by id", async () => {
-    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
-    await getVenues();
-    const sql = vi.mocked(db.execute).mock.calls[0]?.[0] as string;
-    expect(sql).toMatch(/SELECT DISTINCT/i);
-    expect(sql).toMatch(/ORDER BY venue_id/i);
+  it("falls back to scanning readings when the venues table is empty", async () => {
+    vi.mocked(db.execute)
+      .mockResolvedValueOnce(fakeResult([])) // venues table empty
+      .mockResolvedValueOnce(fakeResult([{ id: 1, name: "Alcobendas Principal" }]));
+    const venues = await getVenues();
+    expect(venues).toEqual([{ id: 1, name: "Alcobendas Principal" }]);
+    const fallbackSql = vi.mocked(db.execute).mock.calls[1]?.[0] as string;
+    expect(fallbackSql).toMatch(/SELECT DISTINCT/i);
+    expect(fallbackSql).toMatch(/ORDER BY venue_id/i);
+  });
+
+  it("falls back to readings when the venues table does not exist yet", async () => {
+    vi.mocked(db.execute)
+      .mockRejectedValueOnce(new Error("no such table: venues"))
+      .mockResolvedValueOnce(fakeResult([{ id: 2, name: "Las Rozas Principal" }]));
+    const venues = await getVenues();
+    expect(venues).toEqual([{ id: 2, name: "Las Rozas Principal" }]);
+  });
+
+  it("rethrows unexpected errors instead of silently falling back", async () => {
+    vi.mocked(db.execute).mockRejectedValueOnce(new Error("SQLITE_AUTH: not authorized"));
+    await expect(getVenues()).rejects.toThrow(/not authorized/);
+    expect(vi.mocked(db.execute)).toHaveBeenCalledTimes(1); // no fallback scan
+  });
+});
+
+describe("getVenueHours", () => {
+  it("returns the mapped hours rows", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(
+      fakeResult([
+        { venueId: 1, dow: 1, openMin: 420, closeMin: 1380 },
+        { venueId: 1, dow: 0, openMin: 540, closeMin: 1260 },
+      ])
+    );
+    const hours = await getVenueHours();
+    expect(hours).toEqual([
+      { venueId: 1, dow: 1, openMin: 420, closeMin: 1380 },
+      { venueId: 1, dow: 0, openMin: 540, closeMin: 1260 },
+    ]);
+    expect(vi.mocked(db.execute).mock.calls[0]?.[0]).toMatch(/FROM venue_hours/i);
+  });
+
+  it("returns an empty array when the table does not exist yet", async () => {
+    vi.mocked(db.execute).mockRejectedValueOnce(new Error("no such table: venue_hours"));
+    expect(await getVenueHours()).toEqual([]);
+  });
+
+  it("rethrows unexpected errors instead of masking them as 'no hours'", async () => {
+    vi.mocked(db.execute).mockRejectedValueOnce(new Error("SQLITE_IOERR: disk I/O error"));
+    await expect(getVenueHours()).rejects.toThrow(/disk I\/O/);
   });
 });

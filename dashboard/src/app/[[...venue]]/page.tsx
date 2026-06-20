@@ -13,9 +13,11 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
 import {
   getCachedVenues,
+  getCachedVenueHours,
   getCachedLiveReadings,
   getCachedTodayVisitorCounts,
 } from "@/lib/cached-queries";
+import { madridMoment } from "@/lib/open-status";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
 import {
@@ -97,10 +99,15 @@ export default async function Home({ params, searchParams }: Props) {
   const roundedNow = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
   const roundedNowIso = roundedNow.toISOString();
 
-  const [liveReadings, todayVisitorCounts] = await Promise.all([
+  const [liveReadings, todayVisitorCounts, venueHours] = await Promise.all([
     getCachedLiveReadings(),
     getCachedTodayVisitorCounts(roundedNowIso),
+    getCachedVenueHours(),
   ]);
+
+  // Current Madrid moment, so the live cards can show "Cerrado" for venues that
+  // are closed right now (their newest reading is from closing time).
+  const nowMoment = madridMoment(now);
 
   // Per-venue chart inputs (only consumed when a venue is selected).
   const unit: Unit = isAbsoluteUnit(sp.unit) ? "absolute" : "percentage";
@@ -136,7 +143,13 @@ export default async function Home({ params, searchParams }: Props) {
           Aforo en tiempo real — todos los centros
         </h2>
         <Suspense>
-          <LiveCards readings={liveReadings} todayCounts={todayVisitorCounts} selectedId={selectedVenue?.id} />
+          <LiveCards
+            readings={liveReadings}
+            todayCounts={todayVisitorCounts}
+            venueHours={venueHours}
+            nowMoment={nowMoment}
+            selectedId={selectedVenue?.id}
+          />
         </Suspense>
       </section>
 

@@ -47,6 +47,11 @@ CREATE TABLE readings (
   capacity    INTEGER
   -- percentage computed on demand: occupancy / capacity * 100
 );
+
+-- Companion tables, populated by `sync-venues` from observed readings + the
+-- open-hours.ts config (the dashboard reads them for the venue list + open/closed):
+CREATE TABLE venues (venue_id INTEGER PRIMARY KEY, name TEXT NOT NULL, capacity INTEGER, updated_at TEXT);
+CREATE TABLE venue_hours (venue_id INTEGER, dow INTEGER, open_min INTEGER, close_min INTEGER, PRIMARY KEY (venue_id, dow));
 ```
 
 ---
@@ -98,7 +103,7 @@ Next.js App Router with server components reading from Turso directly.
 - Line chart — occupancy over a selected date range, one line per selected venue _(temporarily removed to reduce Turso reads; full-history scan was the heaviest read driver — revisit later)_
 - Bar chart — average occupancy by hour of day
 - Bar chart — average occupancy by day of week _(temporarily removed to reduce Turso reads — revisit later)_
-- Live view — latest reading per venue (current status)
+- Live view — latest reading per venue (current status); shows "Cerrado / Abre a las HH:MM" from `venue_hours` when a venue is closed, instead of its last pre-close reading
 
 **Filters:**
 - Venue selector (single or multi, with comparison mode)

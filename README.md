@@ -43,7 +43,9 @@ sputnik-crowd-tracker/
 │       ├── index.ts          # entry: fetch → transform → insert
 │       ├── db.ts             # Turso client factory (URL-aware token validation)
 │       ├── transform.ts      # Spanish API → English Reading mapping
-│       ├── migrate.ts        # CREATE TABLE + indexes
+│       ├── migrate.ts        # CREATE TABLE + indexes (readings, venues, venue_hours)
+│       ├── open-hours.ts     # per-venue opening-hours config + "open now?" helpers
+│       ├── sync-venues.ts    # CLI: populate venues + venue_hours from readings + config
 │       ├── seed-dev.ts       # generates ~90 days of realistic mock data
 │       ├── freshness.ts      # pure staleness evaluation
 │       ├── check-freshness.ts # CLI: alert if no recent readings (freshness monitor)
@@ -62,6 +64,7 @@ sputnik-crowd-tracker/
 │           ├── db.ts          # Turso client singleton
 │           ├── queries.ts     # SQL queries (Madrid-timezone aware)
 │           ├── cached-queries.ts  # unstable_cache wrappers
+│           ├── open-status.ts # "open now? / next opening" from venue_hours
 │           ├── venues.ts      # venue name → URL slug helpers
 │           └── labels.ts      # Spanish day/hour labels
 ├── PLAN.md                   # original project plan (some parts aspirational)
@@ -70,7 +73,9 @@ sputnik-crowd-tracker/
 
 ## Database schema
 
-A single table — derived metrics like occupancy percentage are computed on demand.
+The `readings` table holds the time series — derived metrics like occupancy
+percentage are computed on demand. Two small companion tables back the venue
+list and opening-hours features.
 
 ```sql
 CREATE TABLE readings (
@@ -85,7 +90,31 @@ CREATE TABLE readings (
 );
 
 CREATE INDEX idx_readings_venue_ts ON readings (venue_id, timestamp);
+
+CREATE TABLE venues (              -- venue master: identity + last-seen capacity
+  venue_id   INTEGER PRIMARY KEY,
+  name       TEXT    NOT NULL,
+  capacity   INTEGER,
+  updated_at TEXT
+);
+
+CREATE TABLE venue_hours (         -- per-venue opening hours, Madrid local time
+  venue_id  INTEGER NOT NULL,
+  dow       INTEGER NOT NULL,      -- 0 = Sunday … 6 = Saturday
+  open_min  INTEGER NOT NULL,      -- minutes from local midnight
+  close_min INTEGER NOT NULL,
+  PRIMARY KEY (venue_id, dow)
+);
 ```
+
+`venues` and `venue_hours` are populated by `pnpm --filter scraper sync-venues`,
+which reads the venues actually seen in `readings` (so the `venue_id`↔name
+mapping comes from real data) and joins them to the hours config in
+`scraper/src/open-hours.ts`. It's a DB-only job — no gym API call — so run it once
+after migrating and again whenever the set of venues changes. The dashboard reads
+these tables to list venues cheaply and to show "Cerrado / Abre a las HH:MM"
+instead of a stale reading when a venue is shut; if they're empty or not migrated
+yet it falls back gracefully (venue list from `readings`, every venue open).
 
 Timestamps are stored in **UTC**; the dashboard converts to **Europe/Madrid** at query time (DST-aware, see `madridOffsetModifier()` in `queries.ts`).
 
@@ -173,6 +202,7 @@ secret (freshness Action, read-only).
 
 ## Deployment
 
+- **Schema** → run `pnpm --filter scraper migrate` once against Turso to create the tables, then `pnpm --filter scraper sync-venues` to populate `venues` + `venue_hours` (and re-run `sync-venues` whenever the set of venues changes). The dashboard degrades gracefully if `sync-venues` hasn't run yet.
 - **Dashboard** → Vercel (connect the repo; set `TURSO_URL` + `TURSO_AUTH_TOKEN` env vars).
 - **Scraper** → runs on a **Raspberry Pi**, scheduled by cron/systemd to run `pnpm scrape` every 60 seconds, writing to Turso. It only collects while venues are open (hours in `scraper/src/open-hours.ts`): when every venue is closed it skips the cycle entirely, and otherwise inserts only the venues currently open. This cuts overnight writes and keeps the readings table smaller. The cron still fires every 60s — the gate is a cheap early-exit, so no schedule change is needed on the Pi.
 - **Keeping the Pi current** → `scripts/pi-sync.sh` force-syncs the Pi's checkout to `origin/main` (and reinstalls the scraper's deps only when `pnpm-lock.yaml` changed). Add it to cron alongside the scrape job — e.g. every 15 min: `*/15 * * * * /home/pi/sputnik-crowd-tracker/scripts/pi-sync.sh >> /home/pi/sputnik-sync.log 2>&1`. It takes a non-blocking `flock`; wrap the scrape cron with the **same** lock so a sync never updates the worktree under a running scrape: `* * * * * flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape`. It's a deploy-target sync (hard reset to `origin/main`; your untracked `.env` is left alone), so don't keep local commits on the Pi. Schema/migration steps stay manual.

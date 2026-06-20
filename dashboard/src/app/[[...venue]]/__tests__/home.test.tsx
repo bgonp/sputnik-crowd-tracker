@@ -3,14 +3,16 @@ import { render, screen } from "@testing-library/react";
 import type { LiveReading, DailyVisitorCount } from "@/lib/queries";
 
 // Mock the cache layer so importing the page doesn't pull in the Turso client.
-const { getCachedVenues, getCachedLiveReadings, getCachedTodayVisitorCounts } =
+const { getCachedVenues, getCachedVenueHours, getCachedLiveReadings, getCachedTodayVisitorCounts } =
   vi.hoisted(() => ({
     getCachedVenues: vi.fn(),
+    getCachedVenueHours: vi.fn(),
     getCachedLiveReadings: vi.fn(),
     getCachedTodayVisitorCounts: vi.fn(),
   }));
 vi.mock("@/lib/cached-queries", () => ({
   getCachedVenues,
+  getCachedVenueHours,
   getCachedLiveReadings,
   getCachedTodayVisitorCounts,
   // Pulled in transitively by the section components rendered on a venue path.
@@ -73,6 +75,7 @@ const props = (venue?: string[], searchParams: Record<string, string> = {}) => (
 
 beforeEach(() => {
   getCachedVenues.mockReset().mockResolvedValue(VENUES);
+  getCachedVenueHours.mockReset().mockResolvedValue([]);
   getCachedLiveReadings.mockReset().mockResolvedValue(LIVE);
   getCachedTodayVisitorCounts.mockReset().mockResolvedValue(TODAY);
   notFound.mockClear();
