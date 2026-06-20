@@ -44,14 +44,14 @@ export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Pr
           content={
             <ChartTooltipContent
               formatter={(value, name) => {
-                if (value == null) return null;
                 const label = name === "today" ? todayLabel : typicalLabel;
+                // `today` is null in buckets the day hasn't reached yet; show a
+                // placeholder rather than an empty row (which reads as a glitch).
                 return (
                   <span className="flex w-full justify-between gap-3">
                     <span className="text-muted-foreground">{label}</span>
                     <span className="font-mono font-medium tabular-nums">
-                      {Math.round(Number(value))}
-                      {suffix}
+                      {value == null ? "—" : `${Math.round(Number(value))}${suffix}`}
                     </span>
                   </span>
                 );
