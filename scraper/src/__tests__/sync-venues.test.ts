@@ -78,7 +78,10 @@ describe("syncVenues", () => {
     expect(batch).toHaveBeenCalledTimes(1);
     const [statements, mode] = batch.mock.calls[0]!;
     expect(mode).toBe("write");
-    expect(statements).toHaveLength(1 + 7); // 1 venue + 7 hours rows
+    // 1 DELETE (clear venue_hours) + 1 venue upsert + 7 hours inserts
+    expect(statements).toHaveLength(1 + 1 + 7);
+    // venue_hours is cleared first so stale/renamed schedules can't linger.
+    expect(statements[0].sql).toMatch(/DELETE FROM venue_hours/i);
   });
 
   it("does not call batch when there are no observed venues", async () => {

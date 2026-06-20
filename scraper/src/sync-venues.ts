@@ -98,7 +98,18 @@ export async function syncVenues(client: Client, now: Date): Promise<VenueSyncPl
   const observed = await readObservedVenues(client);
   const plan = buildVenueSyncPlan(observed, now.toISOString());
 
+  // Nothing observed (e.g. an empty readings table) — leave the tables untouched
+  // rather than wiping them below.
+  if (plan.venues.length === 0) return plan;
+
   const statements = [
+    // Rebuild venue_hours authoritatively: clear it, then insert the plan's rows.
+    // A plain upsert would leave stale rows behind when a venue stops having a
+    // configured schedule (e.g. renamed in the API so the name no longer matches
+    // a key) — the dashboard would then keep applying the old hours instead of
+    // failing open. The batch runs in one transaction, so readers never observe
+    // the empty intermediate state.
+    { sql: "DELETE FROM venue_hours", args: [] },
     ...plan.venues.map((v) => ({
       sql: `INSERT INTO venues (venue_id, name, capacity, updated_at)
             VALUES (?, ?, ?, ?)
@@ -107,17 +118,12 @@ export async function syncVenues(client: Client, now: Date): Promise<VenueSyncPl
       args: [v.venueId, v.name, v.capacity, v.updatedAt],
     })),
     ...plan.hours.map((h) => ({
-      sql: `INSERT INTO venue_hours (venue_id, dow, open_min, close_min)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(venue_id, dow) DO UPDATE SET
-              open_min = excluded.open_min, close_min = excluded.close_min`,
+      sql: `INSERT INTO venue_hours (venue_id, dow, open_min, close_min) VALUES (?, ?, ?, ?)`,
       args: [h.venueId, h.dow, h.openMin, h.closeMin],
     })),
   ];
 
-  if (statements.length > 0) {
-    await client.batch(statements, "write");
-  }
+  await client.batch(statements, "write");
   return plan;
 }
 
