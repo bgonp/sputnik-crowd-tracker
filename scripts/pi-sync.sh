@@ -4,9 +4,9 @@
 #
 # The Pi is a deploy target (it only runs the scraper), not a dev box, so this
 # force-matches origin/main rather than merging. Untracked files (your .env) are
-# left untouched. Dependencies are reinstalled only when the lockfile or a
-# package.json actually changed, so the common "nothing new" path is just a quick
-# fetch-and-exit.
+# left untouched. Dependencies are reinstalled only when pnpm-lock.yaml actually
+# changed (the canonical signal for any workspace), so the common "nothing new"
+# path is just a quick fetch-and-exit.
 #
 # Schema/data steps are deliberately NOT automated here — `migrate` and
 # `sync-venues` write to Turso and are rare/sensitive, so run them by hand after a
