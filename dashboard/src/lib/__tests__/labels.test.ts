@@ -4,7 +4,9 @@ import {
   HOUR_LABELS,
   OPENING_HOUR,
   FULL_DAY_LABELS,
-  typicalAverageLabel,
+  MONTH_LABELS,
+  lastWeekdaysLabel,
+  dateLineLabel,
 } from "../labels";
 
 describe("DAY_LABELS", () => {
@@ -67,25 +69,43 @@ describe("FULL_DAY_LABELS", () => {
   });
 });
 
-describe("typicalAverageLabel", () => {
+describe("MONTH_LABELS", () => {
+  it("has 12 lowercase Spanish abbreviations, January-indexed", () => {
+    expect(MONTH_LABELS).toHaveLength(12);
+    expect(MONTH_LABELS[0]).toBe("ene");
+    expect(MONTH_LABELS[5]).toBe("jun");
+    expect(MONTH_LABELS[11]).toBe("dic");
+  });
+});
+
+describe("dateLineLabel", () => {
+  it("renders weekday + day + month for a date string", () => {
+    expect(dateLineLabel("2026-06-20")).toBe("Sáb 20 jun"); // Saturday
+    expect(dateLineLabel("2026-06-22")).toBe("Lun 22 jun"); // Monday
+  });
+
+  it("derives the weekday itself (no leading zero on the day)", () => {
+    expect(dateLineLabel("2026-01-04")).toBe("Dom 4 ene"); // Sunday
+  });
+});
+
+describe("lastWeekdaysLabel", () => {
   it("pluralises vowel-ending weekdays (sábado → sábados)", () => {
-    expect(typicalAverageLabel(5, 5)).toBe("Media de 5 sábados");
-    expect(typicalAverageLabel(6, 3)).toBe("Media de 3 domingos");
+    expect(lastWeekdaysLabel(5)).toBe("Últimos sábados");
+    expect(lastWeekdaysLabel(6)).toBe("Últimos domingos");
   });
 
   it("leaves invariable weekdays unchanged (lunes…viernes)", () => {
-    expect(typicalAverageLabel(0, 5)).toBe("Media de 5 lunes");
-    expect(typicalAverageLabel(2, 4)).toBe("Media de 4 miércoles");
-    expect(typicalAverageLabel(4, 2)).toBe("Media de 2 viernes");
+    expect(lastWeekdaysLabel(0)).toBe("Últimos lunes");
+    expect(lastWeekdaysLabel(2)).toBe("Últimos miércoles");
+    expect(lastWeekdaysLabel(4)).toBe("Últimos viernes");
   });
 
-  it("uses the singular weekday when weeks === 1", () => {
-    expect(typicalAverageLabel(5, 1)).toBe("Media de 1 sábado");
-    expect(typicalAverageLabel(0, 1)).toBe("Media de 1 lunes");
+  it("never surfaces the number of weeks", () => {
+    expect(lastWeekdaysLabel(5)).not.toMatch(/\d/);
   });
 
-  it("falls back to a generic noun, singular or plural by count", () => {
-    expect(typicalAverageLabel(99, 5)).toBe("Media de 5 días");
-    expect(typicalAverageLabel(99, 1)).toBe("Media de 1 día");
+  it("falls back to a generic plural noun", () => {
+    expect(lastWeekdaysLabel(99)).toBe("Últimos días");
   });
 });

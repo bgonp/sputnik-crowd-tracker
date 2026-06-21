@@ -8,6 +8,7 @@ import {
   getTimeSeries,
   getTodayVisitorCounts,
   getTodayVsTypical,
+  getDatesWithData,
   getLiveReadings,
   getVenues,
   getVenueHours,
@@ -252,6 +253,50 @@ describe("getTodayVsTypical", () => {
     await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5);
     const { sql } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { sql: string };
     expect(sql).not.toMatch(/HAVING/i);
+  });
+
+  it("anchors the primary line and baseline on a past date when given", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    // now is a Saturday; anchor on the prior Saturday (2026-06-13).
+    await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5, null, "2026-06-13");
+    const { args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { args: unknown[] };
+    // The anchor date is bound as the primary, with its own same-weekday baselines.
+    expect(args).toContain("2026-06-13");
+    expect(args).toContain("2026-06-06");
+    expect(args).toContain("2026-05-09");
+    // Today is no longer part of the query when a past day is selected.
+    expect(args).not.toContain("2026-06-20");
+  });
+
+  it("runs a past day's scan to its end rather than to now", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    const now = new Date("2026-06-20T10:00:00Z");
+    await getTodayVsTypical(1, now, 5, null, "2026-06-13");
+    const { args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { args: unknown[] };
+    // Upper bound is a pad past the anchor's UTC midnight, not the live `now`.
+    expect(args).toContain("2026-06-15T00:00:00.000Z");
+    expect(args).not.toContain(now.toISOString());
+  });
+});
+
+// --- getDatesWithData ---
+
+describe("getDatesWithData", () => {
+  it("returns the venue's distinct Madrid dates, venue-bound and time-ranged", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(
+      fakeResult([{ d: "2026-06-18" }, { d: "2026-06-20" }])
+    );
+    const now = new Date("2026-06-20T10:00:00Z");
+    const dates = await getDatesWithData(2, now, 30);
+    expect(dates).toEqual(["2026-06-18", "2026-06-20"]);
+    const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    expect(sql).toMatch(/SELECT DISTINCT strftime\('%Y-%m-%d'/i);
+    expect(sql).toMatch(/venue_id = \?/i);
+    expect(args).toContain(2); // venue id bound, not interpolated
+    expect(args).toContain(now.toISOString()); // upper bound is now
   });
 });
 

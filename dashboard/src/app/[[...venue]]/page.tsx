@@ -15,10 +15,19 @@ import {
   getCachedVenueHours,
   getCachedLiveReadings,
   getCachedTodayVisitorCounts,
+  getCachedDatesWithData,
 } from "@/lib/cached-queries";
 import { madridMoment, openWindowFor } from "@/lib/open-status";
-import { TYPICAL_WEEKS, madridWeekdayMondayIndexed } from "@/lib/today-vs-typical";
-import { TODAY_LABEL, typicalAverageLabel } from "@/lib/labels";
+import {
+  SELECTABLE_DAYS,
+  madridDateString,
+  mondayIndexedWeekday,
+  sundayIndexedWeekday,
+  recentMadridDates,
+  resolveSelectedDate,
+} from "@/lib/today-vs-typical";
+import { TODAY_LABEL, lastWeekdaysLabel, dateLineLabel } from "@/lib/labels";
+import { DaySelector } from "@/components/DaySelector";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
 import {
@@ -99,11 +108,31 @@ export default async function Home({ params, searchParams }: Props) {
   const roundedNow = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
   const roundedNowIso = roundedNow.toISOString();
 
-  const [liveReadings, todayVisitorCounts, venueHours] = await Promise.all([
+  const todayStr = madridDateString(now);
+  // Day-stable key for the picker's available-days set (changes once a day).
+  const dayKeyIso = `${todayStr}T12:00:00.000Z`;
+
+  const [liveReadings, todayVisitorCounts, venueHours, availableDates] = await Promise.all([
     getCachedLiveReadings(),
     getCachedTodayVisitorCounts(roundedNowIso),
     getCachedVenueHours(),
+    // Only the picker needs this, and only when a venue is selected.
+    selectedVenue
+      ? getCachedDatesWithData(selectedVenue.id, dayKeyIso)
+      : Promise.resolve<string[]>([]),
   ]);
+
+  // The line chart's selected day: today (live) by default, or a validated
+  // recent date from `?date=`. A stale/malformed value — or a past day with no
+  // data — falls back to today.
+  const selectedDate =
+    resolveSelectedDate(sp.date, now, SELECTABLE_DAYS, availableDates) ?? todayStr;
+  const isToday = selectedDate === todayStr;
+  const anchorDate = isToday ? null : selectedDate;
+  // A past day's data is static, so feed the chart a day-stable "now" — its
+  // per-minute cache entry would otherwise churn on every auto-refresh for
+  // nothing. Today keeps the live, per-minute nowIso.
+  const chartNowIso = isToday ? roundedNowIso : dayKeyIso;
 
   // Current Madrid moment, so the live cards can show "Cerrado" for venues that
   // are closed right now (their newest reading is from closing time).
@@ -111,12 +140,18 @@ export default async function Home({ params, searchParams }: Props) {
 
   // Per-venue chart inputs (only consumed when a venue is selected).
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
-  // Baseline legend label, e.g. "Media de 5 sábados" for today's weekday.
-  const typicalLabel = typicalAverageLabel(madridWeekdayMondayIndexed(now), TYPICAL_WEEKS);
-  // Crop the line chart to the venue's open hours for today's weekday.
+  // Baseline legend label for the plotted day's weekday, e.g. "Últimos sábados".
+  const typicalLabel = lastWeekdaysLabel(mondayIndexedWeekday(selectedDate));
+  // Primary-line label + card-title fragment: "Hoy" today, else "Sáb 20 jun".
+  const dayLabel = isToday ? TODAY_LABEL : dateLineLabel(selectedDate);
+  // Crop the line chart to the venue's open hours for the *plotted* day's weekday.
   const openWindow = selectedVenue
-    ? openWindowFor(venueHours, selectedVenue.id, nowMoment.dow)
+    ? openWindowFor(venueHours, selectedVenue.id, sundayIndexedWeekday(selectedDate))
     : null;
+  // Earliest day the chart's date picker allows (today is the latest); the
+  // recent-date list is most-recent-first, so its tail is the oldest.
+  const recentDates = recentMadridDates(now, SELECTABLE_DAYS);
+  const minSelectableDate = recentDates[recentDates.length - 1] ?? todayStr;
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
@@ -171,19 +206,34 @@ export default async function Home({ params, searchParams }: Props) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              Hoy vs. media{selectedVenueName && ` — ${selectedVenueName}`}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base">
+                {dayLabel} vs. media{selectedVenueName && ` — ${selectedVenueName}`}
+              </CardTitle>
+              {selectedVenue && (
+                <DaySelector
+                  selected={selectedDate}
+                  today={todayStr}
+                  minDate={minSelectableDate}
+                  availableDates={availableDates}
+                  triggerLabel={dayLabel}
+                />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {selectedVenue ? (
-              <Suspense fallback={<ChartSkeleton className="h-64" />}>
+              // Key on the selected day so changing it remounts the boundary and
+              // shows the skeleton while the new day loads, instead of lingering
+              // on the previous day's chart (which reads as a glitch mid-fetch).
+              <Suspense key={selectedDate} fallback={<ChartSkeleton className="h-64" />}>
                 <TodayVsTypicalSection
                   venueId={selectedVenue.id}
-                  nowIso={roundedNowIso}
+                  nowIso={chartNowIso}
                   openMin={openWindow?.openMin ?? null}
                   closeMin={openWindow?.closeMin ?? null}
-                  todayLabel={TODAY_LABEL}
+                  anchorDate={anchorDate}
+                  dayLabel={dayLabel}
                   typicalLabel={typicalLabel}
                 />
               </Suspense>

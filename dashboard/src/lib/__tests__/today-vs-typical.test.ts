@@ -3,6 +3,11 @@ import type { TodayVsTypicalPoint } from "../queries";
 import {
   madridDateString,
   sameWeekdayDates,
+  sameWeekdayDatesFromDateString,
+  recentMadridDates,
+  resolveSelectedDate,
+  mondayIndexedWeekday,
+  sundayIndexedWeekday,
   madridWeekdayMondayIndexed,
   formatMinuteOfDay,
   movingAverage,
@@ -45,6 +50,100 @@ describe("sameWeekdayDates", () => {
     // 2027-01-02 is a Saturday; one week back lands in December 2026.
     const [prev] = sameWeekdayDates(new Date("2027-01-02T10:00:00Z"), 1);
     expect(prev).toBe("2026-12-26");
+  });
+});
+
+describe("sameWeekdayDatesFromDateString", () => {
+  it("steps back N same-weekdays from a date string, most recent first", () => {
+    // 2026-06-20 is a Saturday — matches sameWeekdayDates(Date) for the same day.
+    expect(sameWeekdayDatesFromDateString("2026-06-20", 5)).toEqual([
+      "2026-06-13",
+      "2026-06-06",
+      "2026-05-30",
+      "2026-05-23",
+      "2026-05-16",
+    ]);
+  });
+
+  it("backs sameWeekdayDates, which just anchors on now's Madrid date", () => {
+    const now = new Date("2026-06-20T10:00:00Z");
+    expect(sameWeekdayDates(now, 3)).toEqual(
+      sameWeekdayDatesFromDateString(madridDateString(now), 3)
+    );
+  });
+});
+
+describe("recentMadridDates", () => {
+  it("returns the last N Madrid dates ending today, most recent first", () => {
+    expect(recentMadridDates(new Date("2026-06-20T10:00:00Z"), 4)).toEqual([
+      "2026-06-20",
+      "2026-06-19",
+      "2026-06-18",
+      "2026-06-17",
+    ]);
+  });
+
+  it("uses the Madrid date, which can be tomorrow late UTC", () => {
+    // 22:30 UTC is already the 21st in Madrid (+2).
+    expect(recentMadridDates(new Date("2026-06-20T22:30:00Z"), 1)).toEqual(["2026-06-21"]);
+  });
+
+  it("crosses month boundaries", () => {
+    expect(recentMadridDates(new Date("2026-07-01T10:00:00Z"), 2)).toEqual([
+      "2026-07-01",
+      "2026-06-30",
+    ]);
+  });
+});
+
+describe("resolveSelectedDate", () => {
+  const now = new Date("2026-06-20T10:00:00Z");
+
+  it("accepts a date within the recent window", () => {
+    expect(resolveSelectedDate("2026-06-18", now, 30)).toBe("2026-06-18");
+  });
+
+  it("returns null for a date outside the window, so the caller uses today", () => {
+    expect(resolveSelectedDate("2026-01-01", now, 30)).toBeNull();
+  });
+
+  it("rejects future dates (not in the recent list)", () => {
+    expect(resolveSelectedDate("2026-06-25", now, 30)).toBeNull();
+  });
+
+  it("returns null for missing or malformed values", () => {
+    expect(resolveSelectedDate(undefined, now, 30)).toBeNull();
+    expect(resolveSelectedDate("not-a-date", now, 30)).toBeNull();
+  });
+
+  it("validates the first value when the param is repeated", () => {
+    expect(resolveSelectedDate(["2026-06-19", "junk"], now, 30)).toBe("2026-06-19");
+  });
+
+  it("rejects a past day with no data when availableDates is given", () => {
+    expect(resolveSelectedDate("2026-06-18", now, 30, ["2026-06-17"])).toBeNull();
+    expect(resolveSelectedDate("2026-06-18", now, 30, ["2026-06-18"])).toBe("2026-06-18");
+  });
+
+  it("always allows today regardless of data availability", () => {
+    // today (2026-06-20) is absent from the set but still resolves.
+    expect(resolveSelectedDate("2026-06-20", now, 30, ["2026-05-30"])).toBe("2026-06-20");
+  });
+});
+
+describe("mondayIndexedWeekday", () => {
+  it("maps a date string to a Monday-indexed weekday", () => {
+    expect(mondayIndexedWeekday("2026-06-20")).toBe(5); // Saturday
+    expect(mondayIndexedWeekday("2026-06-21")).toBe(6); // Sunday
+    expect(mondayIndexedWeekday("2026-06-22")).toBe(0); // Monday
+  });
+});
+
+describe("sundayIndexedWeekday", () => {
+  it("maps a date string to a Sunday-indexed weekday (venue_hours convention)", () => {
+    expect(sundayIndexedWeekday("2026-06-21")).toBe(0); // Sunday
+    expect(sundayIndexedWeekday("2026-06-22")).toBe(1); // Monday
+    expect(sundayIndexedWeekday("2026-06-20")).toBe(6); // Saturday
   });
 });
 
