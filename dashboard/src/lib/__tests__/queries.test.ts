@@ -7,6 +7,7 @@ import {
   getHeatmap,
   getTimeSeries,
   getTodayVisitorCounts,
+  getTodayVsTypical,
   getLiveReadings,
   getVenues,
   getVenueHours,
@@ -159,6 +160,76 @@ describe("getTodayVisitorCounts", () => {
     const [result] = await getTodayVisitorCounts();
     expect(result).toHaveProperty("venueId", 1);
     expect(result).toHaveProperty("total", 147);
+  });
+});
+
+// --- getTodayVsTypical ---
+
+describe("getTodayVsTypical", () => {
+  it("returns today's and the typical series per time bucket, preserving nulls", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(
+      fakeResult([
+        {
+          minuteOfDay: 600,
+          todayOccupancy: 40,
+          todayPercentage: 50,
+          typicalOccupancy: 30,
+          typicalPercentage: 38,
+        },
+        {
+          minuteOfDay: 615,
+          todayOccupancy: null,
+          todayPercentage: null,
+          typicalOccupancy: 32,
+          typicalPercentage: 40,
+        },
+      ])
+    );
+    const rows = await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"));
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ minuteOfDay: 600, todayPercentage: 50, typicalPercentage: 38 });
+    expect(rows[1].todayOccupancy).toBeNull();
+    expect(rows[1].typicalOccupancy).toBe(32);
+  });
+
+  it("binds the venue, today, and the N baseline same-weekday dates", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    // 2026-06-20 is a Saturday.
+    await getTodayVsTypical(7, new Date("2026-06-20T10:00:00Z"), 5);
+    const call = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    // The venue id is bound, not interpolated.
+    expect(call.args).toContain(7);
+    // Today plus the previous five Saturdays are all bound for the IN filter.
+    expect(call.args).toContain("2026-06-20");
+    expect(call.args).toContain("2026-06-13");
+    expect(call.args).toContain("2026-05-16");
+    // Today appears as a literal placeholder, never spliced into the SQL text.
+    expect(call.sql).not.toContain("2026-06-20");
+    expect(call.sql).toMatch(/GROUP BY minuteOfDay/i);
+  });
+
+  it("bounds the scan with a timestamp range ending at now", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    const now = new Date("2026-06-20T10:00:00Z");
+    await getTodayVsTypical(1, now, 5);
+    const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    expect(sql).toMatch(/timestamp >= \? AND timestamp <= \?/i);
+    expect(args).toContain(now.toISOString());
+  });
+
+  it("buckets the time-of-day with inlined integer division, not a bound param", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5);
+    const { sql } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { sql: string };
+    // A bound `?` binds as REAL → float division leaves minuteOfDay un-bucketed,
+    // so the bucket width must be inlined as an integer literal.
+    expect(sql).toMatch(/\)\s*\/\s*15\s*\*\s*15\s+AS minuteOfDay/i);
   });
 });
 

@@ -17,7 +17,7 @@ vi.mock("@/lib/cached-queries", () => ({
   getCachedTodayVisitorCounts,
   // Pulled in transitively by the section components rendered on a venue path.
   getCachedHeatmap: vi.fn().mockResolvedValue([]),
-  getCachedHourlyAverages: vi.fn().mockResolvedValue([]),
+  getCachedTodayVsTypical: vi.fn().mockResolvedValue([]),
 }));
 
 // `notFound` / `permanentRedirect` halt rendering in Next by throwing; mirror
@@ -101,12 +101,12 @@ describe("Home (root overview)", () => {
       screen.getByText("Selecciona un rocódromo para ver su mapa de calor")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Selecciona un rocódromo para ver su media por hora")
+      screen.getByText("Selecciona un rocódromo para comparar hoy con su media")
     ).toBeInTheDocument();
 
     // Titles carry no venue suffix on the overview.
     expect(screen.getByText("Mapa de calor")).toBeInTheDocument();
-    expect(screen.getByText("Media por hora")).toBeInTheDocument();
+    expect(screen.getByText("Hoy vs. media")).toBeInTheDocument();
 
     expect(notFound).not.toHaveBeenCalled();
     expect(permanentRedirect).not.toHaveBeenCalled();
@@ -124,7 +124,7 @@ describe("Home (venue path)", () => {
 
     // Card titles now carry the venue name.
     expect(screen.getByText("Mapa de calor — Chamberí")).toBeInTheDocument();
-    expect(screen.getByText("Media por hora — Chamberí")).toBeInTheDocument();
+    expect(screen.getByText("Hoy vs. media — Chamberí")).toBeInTheDocument();
 
     // The placeholder prompts are gone (real chart sections render instead).
     expect(

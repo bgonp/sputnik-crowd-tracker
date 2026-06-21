@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { BarChart3, CalendarDays } from "lucide-react";
+import { CalendarDays, LineChart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { HeatmapSection } from "@/components/sections/HeatmapSection";
-import { HourlySection } from "@/components/sections/HourlySection";
+import { TodayVsTypicalSection } from "@/components/sections/TodayVsTypicalSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { UnitToggle, type Unit } from "@/components/UnitToggle";
@@ -18,6 +18,8 @@ import {
   getCachedTodayVisitorCounts,
 } from "@/lib/cached-queries";
 import { madridMoment } from "@/lib/open-status";
+import { TYPICAL_WEEKS, madridWeekdayMondayIndexed } from "@/lib/today-vs-typical";
+import { TODAY_LABEL, typicalAverageLabel } from "@/lib/labels";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
 import {
@@ -112,18 +114,8 @@ export default async function Home({ params, searchParams }: Props) {
   // Per-venue chart inputs (only consumed when a venue is selected).
   const unit: Unit = isAbsoluteUnit(sp.unit) ? "absolute" : "percentage";
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
-  const currentReading = selectedVenue
-    ? liveReadings.find((r) => r.venueId === selectedVenue.id)
-    : undefined;
-  const madridHour = selectedVenue
-    ? parseInt(
-        new Intl.DateTimeFormat("es-ES", {
-          timeZone: "Europe/Madrid",
-          hour: "2-digit",
-          hour12: false,
-        }).format(now)
-      )
-    : 0;
+  // Baseline legend label, e.g. "Media de 5 sábados" for today's weekday.
+  const typicalLabel = typicalAverageLabel(madridWeekdayMondayIndexed(now), TYPICAL_WEEKS);
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
@@ -180,7 +172,7 @@ export default async function Home({ params, searchParams }: Props) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                Media por hora{selectedVenueName && ` — ${selectedVenueName}`}
+                Hoy vs. media{selectedVenueName && ` — ${selectedVenueName}`}
               </CardTitle>
               {selectedVenue && (
                 <Suspense>
@@ -191,18 +183,20 @@ export default async function Home({ params, searchParams }: Props) {
           </CardHeader>
           <CardContent>
             {selectedVenue ? (
-              <Suspense fallback={<ChartSkeleton />}>
-                <HourlySection
+              <Suspense fallback={<ChartSkeleton className="h-64" />}>
+                <TodayVsTypicalSection
                   venueId={selectedVenue.id}
                   unit={unit}
-                  currentHour={madridHour}
-                  currentReading={currentReading}
+                  nowIso={roundedNowIso}
+                  todayLabel={TODAY_LABEL}
+                  typicalLabel={typicalLabel}
                 />
               </Suspense>
             ) : (
               <ChartPlaceholder
-                icon={<BarChart3 className="h-6 w-6" />}
-                label="Selecciona un rocódromo para ver su media por hora"
+                className="h-64"
+                icon={<LineChart className="h-6 w-6" />}
+                label="Selecciona un rocódromo para comparar hoy con su media"
               />
             )}
           </CardContent>

@@ -1,5 +1,11 @@
 import type { Row } from "@libsql/client";
 import { db } from "./db";
+import {
+  sameWeekdayDates,
+  madridDateString,
+  TYPICAL_WEEKS,
+  BUCKET_MINUTES,
+} from "./today-vs-typical";
 
 function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
@@ -68,6 +74,14 @@ export interface DailyVisitorCount {
  *  (the table hasn't been migrated yet). Anything else is a real failure. */
 function isMissingTableError(err: unknown): boolean {
   return err instanceof Error && /no such table/i.test(err.message);
+}
+
+export interface TodayVsTypicalPoint {
+  minuteOfDay: number; // minutes from local (Madrid) midnight, bucketed
+  todayOccupancy: number | null;
+  todayPercentage: number | null;
+  typicalOccupancy: number | null;
+  typicalPercentage: number | null;
 }
 
 export async function getVenues(): Promise<Venue[]> {
@@ -220,4 +234,67 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
     avgPercentage: r.avgPercentage,
     avgOccupancy: r.avgOccupancy,
   }));
+}
+
+/**
+ * Today's occupancy through the day vs. the same-weekday baseline.
+ *
+ * Returns one row per `BUCKET_MINUTES` time-of-day slot, each carrying today's
+ * average and the average across the previous `weeks` same-weekday sessions
+ * (e.g. the last 5 Saturdays). Buckets that today hasn't reached yet have
+ * `today*` = `null` (so the live line stops at "now" while the baseline runs to
+ * close); slots with no readings at all simply don't appear.
+ *
+ * One Turso read: today + the N baseline dates are computed here and bound as a
+ * local-date `IN (…)` filter, with a UTC timestamp range to keep the scan tight.
+ */
+export async function getTodayVsTypical(
+  venueId: number,
+  now = new Date(),
+  weeks = TYPICAL_WEEKS
+): Promise<TodayVsTypicalPoint[]> {
+  const offsetMod = madridOffsetModifier(now);
+  const today = madridDateString(now);
+  const baselineDates = sameWeekdayDates(now, weeks);
+  const dates = [today, ...baselineDates];
+  const placeholders = dates.map(() => "?").join(", ");
+
+  // Bound the scan to the window the IN filter cares about (oldest baseline date
+  // minus a day of slack for the timezone shift), so SQLite can prune by timestamp.
+  const oldest = baselineDates[baselineDates.length - 1] ?? today;
+  const from = new Date(Date.parse(`${oldest}T00:00:00Z`) - 86_400_000).toISOString();
+  const to = now.toISOString();
+
+  const result = await db.execute({
+    // BUCKET_MINUTES is a trusted integer constant, inlined so SQLite does
+    // *integer* division (a bound `?` binds as REAL → float division, which
+    // would leave minuteOfDay un-bucketed).
+    sql: `
+      SELECT
+        (CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) * 60
+          + CAST(strftime('%M', datetime(timestamp, ?)) AS INTEGER)) / ${BUCKET_MINUTES} * ${BUCKET_MINUTES} AS minuteOfDay,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN occupancy END)) AS todayOccupancy,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN CAST(occupancy AS REAL) / capacity * 100 END)) AS todayPercentage,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN occupancy END)) AS typicalOccupancy,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN CAST(occupancy AS REAL) / capacity * 100 END)) AS typicalPercentage
+      FROM readings
+      WHERE venue_id = ?
+        AND capacity > 0
+        AND timestamp >= ? AND timestamp <= ?
+        AND strftime('%Y-%m-%d', datetime(timestamp, ?)) IN (${placeholders})
+      GROUP BY minuteOfDay
+      ORDER BY minuteOfDay
+    `,
+    args: [
+      offsetMod, offsetMod,
+      offsetMod, today,
+      offsetMod, today,
+      offsetMod, today,
+      offsetMod, today,
+      venueId,
+      from, to,
+      offsetMod, ...dates,
+    ],
+  });
+  return toPlain<TodayVsTypicalPoint>(result.rows);
 }
