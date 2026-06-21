@@ -33,9 +33,10 @@ LOCK="${SPUTNIK_LOCK:-/tmp/sputnik.lock}"
 # cron runs with a minimal PATH; point it at the same node/pnpm your scrape cron
 # uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
 # with :- so an unset var can't trip `set -u`. Done before the flock check below
-# so `command -v flock` can resolve /usr/bin/flock even under a minimal cron PATH.
-# `/bin` is included explicitly because on a non-usrmerge Pi core tools (flock,
-# date, git) live there, not under /usr/bin.
+# so `command -v flock` can resolve it even under a minimal cron PATH. We list
+# both /usr/bin and /bin because cron sometimes omits /bin, and on a non-usrmerge
+# Pi some of the tools we call (flock, date, git) may live under /bin rather than
+# /usr/bin — covering both means we don't depend on which one a given Pi uses.
 export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin:/bin${PATH:+:$PATH}"
 
 # Serialize against other sputnik jobs (other syncs, and the scrape cron if you
