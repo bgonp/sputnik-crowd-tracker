@@ -2,8 +2,6 @@ import type { TodayVsTypicalPoint } from "./queries";
 
 /** How many previous same-weekday sessions feed the "typical" baseline. */
 export const TYPICAL_WEEKS = 5;
-/** Time-of-day bucket width (minutes) used to align today with the baseline. */
-export const BUCKET_MINUTES = 15;
 
 /**
  * `YYYY-MM-DD` for `now` in Europe/Madrid. Assembled from `formatToParts` so it
@@ -56,7 +54,7 @@ export function madridWeekdayMondayIndexed(now: Date): number {
   return dow === 0 ? 6 : dow - 1;
 }
 
-/** "HH:MM" label for a minute-of-day bucket (e.g. 615 → "10:15"). */
+/** "HH:MM" label for a minute-of-day (e.g. 615 → "10:15"). */
 export function formatMinuteOfDay(minute: number): string {
   return `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(
     2,

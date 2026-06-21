@@ -20,6 +20,12 @@ interface Props {
 export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
   const chartData = buildTodayVsTypicalSeries(data);
 
+  // The x-axis is now per-minute (hundreds of points), so label only whole
+  // hours — and every other hour when the open window is long — to keep it legible.
+  const hourTicks = chartData.filter((d) => d.time.endsWith(":00")).map((d) => d.time);
+  const tickStep = hourTicks.length > 8 ? 2 : 1;
+  const ticks = hourTicks.filter((_, i) => i % tickStep === 0);
+
   const config = {
     today: { label: todayLabel, color: "var(--chart-1)" },
     typical: { label: typicalLabel, color: "var(--muted-foreground)" },
@@ -29,7 +35,7 @@ export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
     <ChartContainer config={config} className="h-64 w-full">
       <LineChart data={chartData} margin={{ top: 8, right: 12 }}>
         <CartesianGrid vertical={false} />
-        <XAxis dataKey="time" tick={{ fontSize: 11 }} interval={7} minTickGap={24} />
+        <XAxis dataKey="time" ticks={ticks} interval={0} tick={{ fontSize: 11 }} />
         <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} width={36} />
         <ChartTooltip
           content={
