@@ -5,6 +5,7 @@ import {
   sameWeekdayDates,
   madridWeekdayMondayIndexed,
   formatMinuteOfDay,
+  movingAverage,
   buildTodayVsTypicalSeries,
 } from "../today-vs-typical";
 
@@ -87,17 +88,44 @@ describe("buildTodayVsTypicalSeries", () => {
     },
   ];
 
-  it("carries both percentage and people for each series", () => {
+  it("carries both percentage and people, leaving today raw and smoothing the baseline", () => {
+    // Two points, so the moving average over the baseline collapses both to the
+    // mean (38,40 → 39 and 30,32 → 31); today passes through untouched.
     expect(buildTodayVsTypicalSeries(points)).toEqual([
-      { time: "10:00", todayPct: 50, todayAbs: 40, typicalPct: 38, typicalAbs: 30 },
-      { time: "10:15", todayPct: null, todayAbs: null, typicalPct: 40, typicalAbs: 32 },
+      { time: "10:00", todayPct: 50, todayAbs: 40, typicalPct: 39, typicalAbs: 31 },
+      { time: "10:15", todayPct: null, todayAbs: null, typicalPct: 39, typicalAbs: 31 },
     ]);
   });
 
-  it("preserves nulls so the live line can break at 'now'", () => {
+  it("pulls a baseline spike toward its neighbours while today keeps the spike", () => {
+    const spike: TodayVsTypicalPoint[] = [0, 1, 2, 3, 4].map((i) => ({
+      minuteOfDay: 600 + i,
+      todayOccupancy: i === 2 ? 99 : 1,
+      todayPercentage: i === 2 ? 99 : 1,
+      typicalOccupancy: i === 2 ? 99 : 1,
+      typicalPercentage: i === 2 ? 99 : 1,
+    }));
+    const [, , mid] = buildTodayVsTypicalSeries(spike);
+    expect(mid.todayPct).toBe(99); // today's actual reading is left raw
+    expect(mid.typicalPct).toBeLessThan(99); // baseline spike is averaged down
+    expect(mid.typicalPct).toBeGreaterThan(1);
+  });
+
+  it("preserves today nulls so the live line can break at 'now'", () => {
     const [, second] = buildTodayVsTypicalSeries(points);
     expect(second.todayPct).toBeNull();
     expect(second.todayAbs).toBeNull();
-    expect(second.typicalPct).toBe(40);
+    expect(typeof second.typicalPct).toBe("number"); // baseline stays present (smoothed)
+  });
+});
+
+describe("movingAverage", () => {
+  it("averages each point with its neighbours within the radius", () => {
+    expect(movingAverage([2, 4, 6], 1)).toEqual([3, 4, 5]);
+  });
+
+  it("skips nulls, and yields null only when the whole window is empty", () => {
+    expect(movingAverage([null, 4, 6], 1)).toEqual([4, 5, 5]);
+    expect(movingAverage([null, null], 1)).toEqual([null, null]);
   });
 });
