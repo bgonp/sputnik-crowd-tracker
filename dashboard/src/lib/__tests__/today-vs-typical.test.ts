@@ -87,23 +87,17 @@ describe("buildTodayVsTypicalSeries", () => {
     },
   ];
 
-  it("selects percentage values by default", () => {
-    expect(buildTodayVsTypicalSeries(points, "percentage")).toEqual([
-      { time: "10:00", today: 50, typical: 38 },
-      { time: "10:15", today: null, typical: 40 },
-    ]);
-  });
-
-  it("selects absolute (people) values when requested", () => {
-    expect(buildTodayVsTypicalSeries(points, "absolute")).toEqual([
-      { time: "10:00", today: 40, typical: 30 },
-      { time: "10:15", today: null, typical: 32 },
+  it("carries both percentage and people for each series", () => {
+    expect(buildTodayVsTypicalSeries(points)).toEqual([
+      { time: "10:00", todayPct: 50, todayAbs: 40, typicalPct: 38, typicalAbs: 30 },
+      { time: "10:15", todayPct: null, todayAbs: null, typicalPct: 40, typicalAbs: 32 },
     ]);
   });
 
   it("preserves nulls so the live line can break at 'now'", () => {
-    const [, second] = buildTodayVsTypicalSeries(points, "percentage");
-    expect(second.today).toBeNull();
-    expect(second.typical).toBe(40);
+    const [, second] = buildTodayVsTypicalSeries(points);
+    expect(second.todayPct).toBeNull();
+    expect(second.todayAbs).toBeNull();
+    expect(second.typicalPct).toBe(40);
   });
 });

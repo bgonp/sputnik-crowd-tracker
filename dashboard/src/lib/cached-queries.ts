@@ -34,9 +34,16 @@ export const getCachedHeatmap = unstable_cache(getHeatmap, ["heatmap"], {
 });
 
 // Carries today's live line, so it tracks the 60s refresh cadence. The nowIso
-// (rounded to the minute by the caller) is part of the cache key.
+// (rounded to the minute by the caller) and the open window are part of the
+// cache key. openMin/closeMin are null when the venue has no configured hours.
 export const getCachedTodayVsTypical = unstable_cache(
-  (venueId: number, nowIso: string) => getTodayVsTypical(venueId, new Date(nowIso)),
+  (venueId: number, nowIso: string, openMin: number | null, closeMin: number | null) =>
+    getTodayVsTypical(
+      venueId,
+      new Date(nowIso),
+      undefined,
+      openMin !== null && closeMin !== null ? { openMin, closeMin } : null
+    ),
   ["today-vs-typical"],
   { revalidate: 60 }
 );

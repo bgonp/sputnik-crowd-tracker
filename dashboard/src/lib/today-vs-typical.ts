@@ -1,4 +1,3 @@
-import type { Unit } from "@/components/UnitToggle";
 import type { TodayVsTypicalPoint } from "./queries";
 
 /** How many previous same-weekday sessions feed the "typical" baseline. */
@@ -67,19 +66,23 @@ export function formatMinuteOfDay(minute: number): string {
 
 export interface TodayVsTypicalDatum {
   time: string;
-  today: number | null;
-  typical: number | null;
+  // Percentage drives the plotted lines; the absolute counts ride along so the
+  // tooltip can show both ("42% · 31 pers.") now that the unit toggle is gone.
+  todayPct: number | null;
+  todayAbs: number | null;
+  typicalPct: number | null;
+  typicalAbs: number | null;
 }
 
-/** Pick the per-unit values and shape the points for the line chart. */
+/** Shape the query points for the line chart, carrying both % and people. */
 export function buildTodayVsTypicalSeries(
-  points: TodayVsTypicalPoint[],
-  unit: Unit
+  points: TodayVsTypicalPoint[]
 ): TodayVsTypicalDatum[] {
-  const absolute = unit === "absolute";
   return points.map((p) => ({
     time: formatMinuteOfDay(p.minuteOfDay),
-    today: absolute ? p.todayOccupancy : p.todayPercentage,
-    typical: absolute ? p.typicalOccupancy : p.typicalPercentage,
+    todayPct: p.todayPercentage,
+    todayAbs: p.todayOccupancy,
+    typicalPct: p.typicalPercentage,
+    typicalAbs: p.typicalOccupancy,
   }));
 }

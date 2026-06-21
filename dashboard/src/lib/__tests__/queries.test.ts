@@ -231,6 +231,28 @@ describe("getTodayVsTypical", () => {
     // so the bucket width must be inlined as an integer literal.
     expect(sql).toMatch(/\)\s*\/\s*15\s*\*\s*15\s+AS minuteOfDay/i);
   });
+
+  it("crops to the open window with a HAVING when one is given", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5, {
+      openMin: 540,
+      closeMin: 1260,
+    });
+    const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    expect(sql).toMatch(/HAVING minuteOfDay >= \? AND minuteOfDay < \?/i);
+    // The window bounds are the last two bound args (after the IN-list dates).
+    expect(args.slice(-2)).toEqual([540, 1260]);
+  });
+
+  it("omits the HAVING clause when no open window is given", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5);
+    const { sql } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { sql: string };
+    expect(sql).not.toMatch(/HAVING/i);
+  });
 });
 
 // --- getLiveReadings ---

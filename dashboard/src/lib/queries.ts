@@ -247,11 +247,17 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
  *
  * One Turso read: today + the N baseline dates are computed here and bound as a
  * local-date `IN (…)` filter, with a UTC timestamp range to keep the scan tight.
+ *
+ * When `openWindow` is given, buckets outside the venue's open hours are dropped
+ * (a `HAVING` on `minuteOfDay`). This crops the chart to opening hours even
+ * though older baseline days predate the "collect only while open" change and so
+ * still carry overnight readings. Pass `null` to keep every bucket.
  */
 export async function getTodayVsTypical(
   venueId: number,
   now = new Date(),
-  weeks = TYPICAL_WEEKS
+  weeks = TYPICAL_WEEKS,
+  openWindow: { openMin: number; closeMin: number } | null = null
 ): Promise<TodayVsTypicalPoint[]> {
   const offsetMod = madridOffsetModifier(now);
   const today = madridDateString(now);
@@ -264,6 +270,10 @@ export async function getTodayVsTypical(
   const oldest = baselineDates[baselineDates.length - 1] ?? today;
   const from = new Date(Date.parse(`${oldest}T00:00:00Z`) - 86_400_000).toISOString();
   const to = now.toISOString();
+
+  // Crop to open hours: keep buckets from openMin up to (but not including) closeMin.
+  const having = openWindow ? "HAVING minuteOfDay >= ? AND minuteOfDay < ?" : "";
+  const windowArgs = openWindow ? [openWindow.openMin, openWindow.closeMin] : [];
 
   const result = await db.execute({
     // BUCKET_MINUTES is a trusted integer constant, inlined so SQLite does
@@ -283,6 +293,7 @@ export async function getTodayVsTypical(
         AND timestamp >= ? AND timestamp <= ?
         AND strftime('%Y-%m-%d', datetime(timestamp, ?)) IN (${placeholders})
       GROUP BY minuteOfDay
+      ${having}
       ORDER BY minuteOfDay
     `,
     args: [
@@ -294,6 +305,7 @@ export async function getTodayVsTypical(
       venueId,
       from, to,
       offsetMod, ...dates,
+      ...windowArgs,
     ],
   });
   return toPlain<TodayVsTypicalPoint>(result.rows);

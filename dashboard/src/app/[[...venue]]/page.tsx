@@ -10,21 +10,19 @@ import { HeatmapSection } from "@/components/sections/HeatmapSection";
 import { TodayVsTypicalSection } from "@/components/sections/TodayVsTypicalSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { UnitToggle, type Unit } from "@/components/UnitToggle";
 import {
   getCachedVenues,
   getCachedVenueHours,
   getCachedLiveReadings,
   getCachedTodayVisitorCounts,
 } from "@/lib/cached-queries";
-import { madridMoment } from "@/lib/open-status";
+import { madridMoment, openWindowFor } from "@/lib/open-status";
 import { TYPICAL_WEEKS, madridWeekdayMondayIndexed } from "@/lib/today-vs-typical";
 import { TODAY_LABEL, typicalAverageLabel } from "@/lib/labels";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
 import {
   type SearchParams,
-  isAbsoluteUnit,
   forwardedQuery,
   parseLegacyVenueId,
 } from "@/lib/venue-routing";
@@ -112,10 +110,13 @@ export default async function Home({ params, searchParams }: Props) {
   const nowMoment = madridMoment(now);
 
   // Per-venue chart inputs (only consumed when a venue is selected).
-  const unit: Unit = isAbsoluteUnit(sp.unit) ? "absolute" : "percentage";
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
   // Baseline legend label, e.g. "Media de 5 sábados" for today's weekday.
   const typicalLabel = typicalAverageLabel(madridWeekdayMondayIndexed(now), TYPICAL_WEEKS);
+  // Crop the line chart to the venue's open hours for today's weekday.
+  const openWindow = selectedVenue
+    ? openWindowFor(venueHours, selectedVenue.id, nowMoment.dow)
+    : null;
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
@@ -170,24 +171,18 @@ export default async function Home({ params, searchParams }: Props) {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                Hoy vs. media{selectedVenueName && ` — ${selectedVenueName}`}
-              </CardTitle>
-              {selectedVenue && (
-                <Suspense>
-                  <UnitToggle unit={unit} />
-                </Suspense>
-              )}
-            </div>
+            <CardTitle className="text-base">
+              Hoy vs. media{selectedVenueName && ` — ${selectedVenueName}`}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {selectedVenue ? (
               <Suspense fallback={<ChartSkeleton className="h-64" />}>
                 <TodayVsTypicalSection
                   venueId={selectedVenue.id}
-                  unit={unit}
                   nowIso={roundedNowIso}
+                  openMin={openWindow?.openMin ?? null}
+                  closeMin={openWindow?.closeMin ?? null}
                   todayLabel={TODAY_LABEL}
                   typicalLabel={typicalLabel}
                 />

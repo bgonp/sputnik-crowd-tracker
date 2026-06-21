@@ -45,6 +45,20 @@ export function formatMinute(minuteOfDay: number): string {
   return `${hh}:${mm}`;
 }
 
+/**
+ * The venue's configured open window for a given day-of-week (0 = Sunday … 6 =
+ * Saturday), or `null` when the table has no row for it — in which case callers
+ * skip cropping (fail-safe, matching `openStatusFor`'s "no rows ⇒ open").
+ */
+export function openWindowFor(
+  hours: VenueHours[],
+  venueId: number,
+  dow: number
+): { openMin: number; closeMin: number } | null {
+  const row = hours.find((h) => h.venueId === venueId && h.dow === dow);
+  return row ? { openMin: row.openMin, closeMin: row.closeMin } : null;
+}
+
 export interface OpenStatus {
   open: boolean;
   /** "HH:MM" of the venue's next opening, when currently closed and one is known. */
