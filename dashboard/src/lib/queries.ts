@@ -1,11 +1,6 @@
 import type { Row } from "@libsql/client";
 import { db } from "./db";
-import {
-  sameWeekdayDates,
-  madridDateString,
-  TYPICAL_WEEKS,
-  BUCKET_MINUTES,
-} from "./today-vs-typical";
+import { sameWeekdayDates, madridDateString, TYPICAL_WEEKS } from "./today-vs-typical";
 
 function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
@@ -77,7 +72,7 @@ function isMissingTableError(err: unknown): boolean {
 }
 
 export interface TodayVsTypicalPoint {
-  minuteOfDay: number; // minutes from local (Madrid) midnight, bucketed
+  minuteOfDay: number; // minutes from local (Madrid) midnight (per-minute)
   todayOccupancy: number | null;
   todayPercentage: number | null;
   typicalOccupancy: number | null;
@@ -239,19 +234,26 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
 /**
  * Today's occupancy through the day vs. the same-weekday baseline.
  *
- * Returns one row per `BUCKET_MINUTES` time-of-day slot, each carrying today's
- * average and the average across the previous `weeks` same-weekday sessions
- * (e.g. the last 5 Saturdays). Buckets that today hasn't reached yet have
+ * Returns one row per minute-of-day, each carrying today's reading and the
+ * average across the previous `weeks` same-weekday sessions (e.g. the last 5
+ * Saturdays). Grouping by minute-of-day aligns the per-day readings, whose exact
+ * second drifts between days. Minutes that today hasn't reached yet have
  * `today*` = `null` (so the live line stops at "now" while the baseline runs to
- * close); slots with no readings at all simply don't appear.
+ * close); minutes with no readings at all simply don't appear.
  *
  * One Turso read: today + the N baseline dates are computed here and bound as a
  * local-date `IN (…)` filter, with a UTC timestamp range to keep the scan tight.
+ *
+ * When `openWindow` is given, buckets outside the venue's open hours are dropped
+ * (a `HAVING` on `minuteOfDay`). This crops the chart to opening hours even
+ * though older baseline days predate the "collect only while open" change and so
+ * still carry overnight readings. Pass `null` to keep every bucket.
  */
 export async function getTodayVsTypical(
   venueId: number,
   now = new Date(),
-  weeks = TYPICAL_WEEKS
+  weeks = TYPICAL_WEEKS,
+  openWindow: { openMin: number; closeMin: number } | null = null
 ): Promise<TodayVsTypicalPoint[]> {
   const offsetMod = madridOffsetModifier(now);
   const today = madridDateString(now);
@@ -265,14 +267,15 @@ export async function getTodayVsTypical(
   const from = new Date(Date.parse(`${oldest}T00:00:00Z`) - 86_400_000).toISOString();
   const to = now.toISOString();
 
+  // Crop to open hours: keep minutes from openMin up to (but not including) closeMin.
+  const having = openWindow ? "HAVING minuteOfDay >= ? AND minuteOfDay < ?" : "";
+  const windowArgs = openWindow ? [openWindow.openMin, openWindow.closeMin] : [];
+
   const result = await db.execute({
-    // BUCKET_MINUTES is a trusted integer constant, inlined so SQLite does
-    // *integer* division (a bound `?` binds as REAL → float division, which
-    // would leave minuteOfDay un-bucketed).
     sql: `
       SELECT
-        (CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) * 60
-          + CAST(strftime('%M', datetime(timestamp, ?)) AS INTEGER)) / ${BUCKET_MINUTES} * ${BUCKET_MINUTES} AS minuteOfDay,
+        CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) * 60
+          + CAST(strftime('%M', datetime(timestamp, ?)) AS INTEGER) AS minuteOfDay,
         ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN occupancy END)) AS todayOccupancy,
         ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN CAST(occupancy AS REAL) / capacity * 100 END)) AS todayPercentage,
         ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN occupancy END)) AS typicalOccupancy,
@@ -283,6 +286,7 @@ export async function getTodayVsTypical(
         AND timestamp >= ? AND timestamp <= ?
         AND strftime('%Y-%m-%d', datetime(timestamp, ?)) IN (${placeholders})
       GROUP BY minuteOfDay
+      ${having}
       ORDER BY minuteOfDay
     `,
     args: [
@@ -294,6 +298,7 @@ export async function getTodayVsTypical(
       venueId,
       from, to,
       offsetMod, ...dates,
+      ...windowArgs,
     ],
   });
   return toPlain<TodayVsTypicalPoint>(result.rows);

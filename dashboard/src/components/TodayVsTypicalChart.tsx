@@ -8,21 +8,23 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import type { Unit } from "@/components/UnitToggle";
 import type { TodayVsTypicalPoint } from "@/lib/queries";
-import { buildTodayVsTypicalSeries } from "@/lib/today-vs-typical";
+import { buildTodayVsTypicalSeries, type TodayVsTypicalDatum } from "@/lib/today-vs-typical";
 
 interface Props {
   data: TodayVsTypicalPoint[];
-  unit: Unit;
   todayLabel: string;
   typicalLabel: string;
 }
 
-export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Props) {
-  const isAbsolute = unit === "absolute";
-  const chartData = buildTodayVsTypicalSeries(data, unit);
-  const suffix = isAbsolute ? " pers." : "%";
+export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
+  const chartData = buildTodayVsTypicalSeries(data);
+
+  // The x-axis is now per-minute (hundreds of points), so label only whole
+  // hours — and every other hour when the open window is long — to keep it legible.
+  const hourTicks = chartData.filter((d) => d.time.endsWith(":00")).map((d) => d.time);
+  const tickStep = hourTicks.length > 8 ? 2 : 1;
+  const ticks = hourTicks.filter((_, i) => i % tickStep === 0);
 
   const config = {
     today: { label: todayLabel, color: "var(--chart-1)" },
@@ -33,25 +35,24 @@ export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Pr
     <ChartContainer config={config} className="h-64 w-full">
       <LineChart data={chartData} margin={{ top: 8, right: 12 }}>
         <CartesianGrid vertical={false} />
-        <XAxis dataKey="time" tick={{ fontSize: 11 }} interval={7} minTickGap={24} />
-        <YAxis
-          unit={isAbsolute ? "" : "%"}
-          domain={isAbsolute ? [0, "auto"] : [0, 100]}
-          tick={{ fontSize: 11 }}
-          width={36}
-        />
+        <XAxis dataKey="time" ticks={ticks} interval={0} tick={{ fontSize: 11 }} />
+        <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} width={36} />
         <ChartTooltip
           content={
             <ChartTooltipContent
-              formatter={(value, name) => {
-                const label = name === "today" ? todayLabel : typicalLabel;
+              formatter={(_value, name, item) => {
+                const d = item.payload as TodayVsTypicalDatum;
+                const isToday = name === "today";
+                const pct = isToday ? d.todayPct : d.typicalPct;
+                const abs = isToday ? d.todayAbs : d.typicalAbs;
+                const label = isToday ? todayLabel : typicalLabel;
                 // `today` is null in buckets the day hasn't reached yet; show a
                 // placeholder rather than an empty row (which reads as a glitch).
                 return (
                   <span className="flex w-full justify-between gap-3">
                     <span className="text-muted-foreground">{label}</span>
                     <span className="font-mono font-medium tabular-nums">
-                      {value == null ? "—" : `${Math.round(Number(value))}${suffix}`}
+                      {pct == null ? "—" : `${Math.round(pct)}% · ${Math.round(abs ?? 0)} pers.`}
                     </span>
                   </span>
                 );
@@ -63,7 +64,7 @@ export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Pr
         {/* Baseline first so today's live line draws on top of it. Gaps are
             left unconnected so a missing baseline bucket isn't drawn as a value. */}
         <Line
-          dataKey="typical"
+          dataKey="typicalPct"
           name="typical"
           type="monotone"
           stroke="var(--color-typical)"
@@ -75,7 +76,7 @@ export function TodayVsTypicalChart({ data, unit, todayLabel, typicalLabel }: Pr
           isAnimationActive={false}
         />
         <Line
-          dataKey="today"
+          dataKey="todayPct"
           name="today"
           type="monotone"
           stroke="var(--color-today)"

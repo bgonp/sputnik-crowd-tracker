@@ -166,7 +166,7 @@ describe("getTodayVisitorCounts", () => {
 // --- getTodayVsTypical ---
 
 describe("getTodayVsTypical", () => {
-  it("returns today's and the typical series per time bucket, preserving nulls", async () => {
+  it("returns today's and the typical series per minute, preserving nulls", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(
       fakeResult([
         {
@@ -177,7 +177,7 @@ describe("getTodayVsTypical", () => {
           typicalPercentage: 38,
         },
         {
-          minuteOfDay: 615,
+          minuteOfDay: 601,
           todayOccupancy: null,
           todayPercentage: null,
           typicalOccupancy: 32,
@@ -223,13 +223,35 @@ describe("getTodayVsTypical", () => {
     expect(args).toContain(now.toISOString());
   });
 
-  it("buckets the time-of-day with inlined integer division, not a bound param", async () => {
+  it("computes minute-of-day at full resolution (hour*60 + minute, no bucketing)", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
     await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5);
     const { sql } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { sql: string };
-    // A bound `?` binds as REAL → float division leaves minuteOfDay un-bucketed,
-    // so the bucket width must be inlined as an integer literal.
-    expect(sql).toMatch(/\)\s*\/\s*15\s*\*\s*15\s+AS minuteOfDay/i);
+    expect(sql).toMatch(/\*\s*60\s*\+\s*CAST\(strftime\('%M'[\s\S]*?AS minuteOfDay/i);
+    // No bucketing arithmetic — every minute is its own point.
+    expect(sql).not.toMatch(/\/\s*15\s*\*\s*15/);
+  });
+
+  it("crops to the open window with a HAVING when one is given", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5, {
+      openMin: 540,
+      closeMin: 1260,
+    });
+    const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    expect(sql).toMatch(/HAVING minuteOfDay >= \? AND minuteOfDay < \?/i);
+    // The window bounds are the last two bound args (after the IN-list dates).
+    expect(args.slice(-2)).toEqual([540, 1260]);
+  });
+
+  it("omits the HAVING clause when no open window is given", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"), 5);
+    const { sql } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as { sql: string };
+    expect(sql).not.toMatch(/HAVING/i);
   });
 });
 

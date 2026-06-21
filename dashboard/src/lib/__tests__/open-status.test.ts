@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { VenueHours } from "../queries";
-import { madridMoment, formatMinute, openStatusFor, type MadridMoment } from "../open-status";
+import {
+  madridMoment,
+  formatMinute,
+  openStatusFor,
+  openWindowFor,
+  type MadridMoment,
+} from "../open-status";
 
 // Venue 1 schedule: weekday 07:00–23:00, Saturday 09:00–22:00, Sunday 09:00–21:00.
 const hours: VenueHours[] = [
@@ -58,5 +64,18 @@ describe("openStatusFor", () => {
 
   it("treats a venue with no configured hours as open (fail-safe)", () => {
     expect(openStatusFor(hours, 99, at(1, 3))).toEqual({ open: true });
+  });
+});
+
+describe("openWindowFor", () => {
+  it("returns the open/close minutes for the venue's matching weekday", () => {
+    expect(openWindowFor(hours, 1, 0)).toEqual({ openMin: 9 * 60, closeMin: 21 * 60 }); // Sunday
+    expect(openWindowFor(hours, 1, 3)).toEqual({ openMin: 7 * 60, closeMin: 23 * 60 }); // Wednesday
+    expect(openWindowFor(hours, 1, 6)).toEqual({ openMin: 9 * 60, closeMin: 22 * 60 }); // Saturday
+  });
+
+  it("returns null when the venue has no row for that weekday (skip cropping)", () => {
+    expect(openWindowFor(hours, 99, 1)).toBeNull();
+    expect(openWindowFor([], 1, 1)).toBeNull();
   });
 });
