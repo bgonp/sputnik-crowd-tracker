@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # Keep the Raspberry Pi's checkout in sync with origin/main.
 #
@@ -18,7 +18,7 @@
 # protection). Wrap the scrape cron with the SAME lock so the two never overlap.
 # cron's PATH is minimal, so prefix the scrape line with one that includes pnpm
 # (adjust to where pnpm lives):
-#   * * * * * PATH=/home/pi/.local/share/pnpm:/usr/local/bin:/usr/bin flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
+#   * * * * * PATH=/home/pi/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
 #
 # Install (point it at your checkout — either edit the REPO_DIR default below or
 # export SPUTNIK_REPO_DIR), then add to `crontab -e`:
@@ -34,7 +34,9 @@ LOCK="${SPUTNIK_LOCK:-/tmp/sputnik.lock}"
 # uses (override SPUTNIK_PNPM_PATH if pnpm lives elsewhere). HOME/PATH are guarded
 # with :- so an unset var can't trip `set -u`. Done before the flock check below
 # so `command -v flock` can resolve /usr/bin/flock even under a minimal cron PATH.
-export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin${PATH:+:$PATH}"
+# `/bin` is included explicitly because on a non-usrmerge Pi core tools (flock,
+# date, git) live there, not under /usr/bin.
+export PATH="${SPUTNIK_PNPM_PATH:-${HOME:-}/.local/share/pnpm}:/usr/local/bin:/usr/bin:/bin${PATH:+:$PATH}"
 
 # Serialize against other sputnik jobs (other syncs, and the scrape cron if you
 # wrap it with the same lock) so a reset/install never lands under a running
