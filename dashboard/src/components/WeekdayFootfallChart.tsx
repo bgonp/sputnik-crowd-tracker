@@ -1,0 +1,76 @@
+"use client";
+
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import type { WeekdayFootfall } from "@/lib/queries";
+import { occupancyColor } from "@/lib/occupancy-color";
+import {
+  buildWeekdayFootfallSeries,
+  weekdayActivityScale,
+  type WeekdayFootfallDatum,
+} from "@/lib/weekday-footfall";
+
+export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
+  const series = buildWeekdayFootfallSeries(data);
+  // Quietest day → green, busiest → red, on the same scale as the heatmap, so
+  // the best and worst days to visit pop out. null (no data / all tied) = muted.
+  const scale = weekdayActivityScale(series);
+  const barColor = (i: number): string => {
+    const t = scale[i];
+    return t == null ? "var(--muted-foreground)" : occupancyColor(t * 100);
+  };
+
+  const config = {
+    avgVisitors: { label: "Visitantes", color: "var(--primary)" },
+  };
+
+  return (
+    <div className="flex h-64 flex-col">
+      <ChartContainer config={config} className="min-h-0 flex-1 w-full">
+        <BarChart data={series} margin={{ top: 8, right: 12 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="label" interval={0} tick={{ fontSize: 11 }} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={36} />
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                labelFormatter={(_label, payload) =>
+                  (payload?.[0]?.payload as WeekdayFootfallDatum | undefined)?.fullLabel ?? ""
+                }
+                formatter={(_value, _name, item) => {
+                  const d = item.payload as WeekdayFootfallDatum;
+                  return (
+                    <span className="flex w-full justify-between gap-3">
+                      <span className="text-muted-foreground">Media de visitantes</span>
+                      <span className="font-mono font-medium tabular-nums">
+                        {d.hasData ? Math.round(d.avgVisitors) : "—"}
+                      </span>
+                    </span>
+                  );
+                }}
+              />
+            }
+          />
+          <Bar dataKey="avgVisitors" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+            {series.map((d, i) => (
+              <Cell key={d.day} fill={barColor(i)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+      {/* Green→red activity legend, mirroring the heatmap's. */}
+      <div className="flex items-center justify-center gap-2 pt-3 text-xs text-muted-foreground">
+        <span>menos</span>
+        <div
+          className="h-3 w-32 rounded-sm"
+          style={{ background: "linear-gradient(to right, hsl(120 70% 60%), hsl(72 70% 60%), hsl(40 70% 60%), hsl(20 70% 60%), hsl(0 70% 60%))" }}
+        />
+        <span>más actividad</span>
+      </div>
+    </div>
+  );
+}

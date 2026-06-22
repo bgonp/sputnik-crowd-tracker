@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { CalendarDays, LineChart, AlertTriangle } from "lucide-react";
+import { CalendarDays, LineChart, BarChart3, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { HeatmapSection } from "@/components/sections/HeatmapSection";
 import { TodayVsTypicalSection } from "@/components/sections/TodayVsTypicalSection";
+import { WeekdayFootfallSection } from "@/components/sections/WeekdayFootfallSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import {
@@ -295,6 +296,30 @@ export default async function Home({ params, searchParams }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex min-h-7 items-center">
+            <CardTitle className="text-base">
+              Actividad por día de la semana{selectedVenueName && ` — ${selectedVenueName}`}
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {selectedVenue ? (
+            <Suspense fallback={<ChartSkeleton className="h-64" />}>
+              <WeekdayFootfallSection venueId={selectedVenue.id} dayIso={dayKeyIso} />
+            </Suspense>
+          ) : (
+            <ChartPlaceholder
+              variant="grid"
+              className="h-64"
+              icon={<BarChart3 className="h-6 w-6" />}
+              label="Selecciona un rocódromo para ver su día más y menos concurrido"
+            />
+          )}
+        </CardContent>
+      </Card>
     </main>
   );
 }
