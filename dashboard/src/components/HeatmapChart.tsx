@@ -2,12 +2,12 @@
 
 import { DAY_LABELS, HEATMAP_FIRST_HOUR, HOUR_LABELS } from "@/lib/labels";
 import { isHeatmapCellOpen } from "@/lib/open-status";
+import { occupancyColor } from "@/lib/occupancy-color";
 import type { HeatmapCell, VenueHours } from "@/lib/queries";
 
 function cellStyle(pct: number): React.CSSProperties {
   if (pct === 0) return {};
-  const hue = 120 - Math.pow(pct / 100, 0.5) * 120;
-  return { backgroundColor: `hsl(${hue.toFixed(1)} 70% 60%)` };
+  return { backgroundColor: occupancyColor(pct) };
 }
 
 export function HeatmapChart({
