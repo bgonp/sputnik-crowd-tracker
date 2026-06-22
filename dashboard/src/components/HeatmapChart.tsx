@@ -37,15 +37,20 @@ export function HeatmapChart({
             <div className="w-8 text-[11px] text-muted-foreground text-right pr-1">{day}</div>
             {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((_, i) => {
               const h = i + HEATMAP_FIRST_HOUR;
-              // Outside the venue's open window: render a faint cell flagged as
-              // closed, so the grid clearly shows the gym was closed then rather
-              // than looking like missing data or a cropped chart.
+              // Outside the venue's open window: render a diagonally-hatched cell
+              // flagged as closed, so the grid clearly reads as "the gym was closed
+              // then" — distinct from both colored data and the flat muted "Sin
+              // datos" of an open hour with no readings.
               if (!isHeatmapCellOpen(hours, venueId, d, h)) {
                 return (
                   <div
                     key={h}
                     title={`${day} ${HOUR_LABELS[h]}: cerrado`}
-                    className="w-8 h-6 m-px rounded-sm bg-muted/40"
+                    className="w-8 h-6 m-px rounded-sm bg-muted"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(45deg, color-mix(in oklch, var(--color-muted-foreground) 35%, transparent) 0, color-mix(in oklch, var(--color-muted-foreground) 35%, transparent) 1px, transparent 1px, transparent 5px)",
+                    }}
                   />
                 );
               }
