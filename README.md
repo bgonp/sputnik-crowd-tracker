@@ -78,6 +78,11 @@ The `readings` table holds the time series — derived metrics like occupancy
 percentage are computed on demand. Two small companion tables back the venue
 list and opening-hours features.
 
+The gym API occasionally reports a negative `occupancy` (physically
+impossible). It's stored raw, but every query clamps it to 0 on read
+(`MAX(occupancy, 0)`), so neither the value, the derived percentage, nor any
+average is ever shown below zero.
+
 ```sql
 CREATE TABLE readings (
   id          TEXT    PRIMARY KEY,  -- UUID v4, generated in the scraper

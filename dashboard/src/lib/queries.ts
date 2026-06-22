@@ -13,6 +13,13 @@ function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
 }
 
+// The gym API occasionally reports a negative occupancy, which is physically
+// impossible. We keep the raw value in the DB but never surface a negative one:
+// clamp to 0 at read time. Using it everywhere occupancy is read also stops a
+// stray negative reading from dragging averages and percentages below zero.
+const OCCUPANCY = "MAX(occupancy, 0)";
+const OCCUPANCY_PCT = `CAST(${OCCUPANCY} AS REAL) / capacity * 100`;
+
 export function madridOffsetModifier(now = new Date()): string {
   const madridHour = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })).getHours();
   let offset = madridHour - now.getUTCHours();
@@ -155,8 +162,8 @@ export async function getVenueHours(): Promise<VenueHours[]> {
 
 export async function getLiveReadings(): Promise<LiveReading[]> {
   const result = await db.execute(`
-    SELECT venue_id AS venueId, venue_name AS venueName, occupancy, capacity,
-           ROUND(CAST(occupancy AS REAL) / capacity * 100) AS percentage,
+    SELECT venue_id AS venueId, venue_name AS venueName, ${OCCUPANCY} AS occupancy, capacity,
+           ROUND(${OCCUPANCY_PCT}) AS percentage,
            timestamp
     FROM readings
     WHERE (venue_id, timestamp) IN (
@@ -240,7 +247,7 @@ export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {
       SELECT
         CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
         CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) AS hour,
-        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage
+        ROUND(AVG(${OCCUPANCY_PCT})) AS avgPercentage
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw, hour
@@ -267,8 +274,8 @@ export async function getTimeSeries(
   const result = await db.execute({
     sql: `
       SELECT timestamp,
-             ROUND(CAST(occupancy AS REAL) / capacity * 100) AS percentage,
-             occupancy,
+             ROUND(${OCCUPANCY_PCT}) AS percentage,
+             ${OCCUPANCY} AS occupancy,
              capacity
       FROM readings
       WHERE venue_id = ? AND capacity > 0
@@ -287,8 +294,8 @@ export async function getHourlyAverages(venueIds: number[]): Promise<HourlyBar[]
     sql: `
       SELECT
         CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) AS hour,
-        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage,
-        ROUND(AVG(occupancy)) AS avgOccupancy
+        ROUND(AVG(${OCCUPANCY_PCT})) AS avgPercentage,
+        ROUND(AVG(${OCCUPANCY})) AS avgOccupancy
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY hour
@@ -307,8 +314,8 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
     sql: `
       SELECT
         CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
-        ROUND(AVG(CAST(occupancy AS REAL) / capacity * 100)) AS avgPercentage,
-        ROUND(AVG(occupancy)) AS avgOccupancy
+        ROUND(AVG(${OCCUPANCY_PCT})) AS avgPercentage,
+        ROUND(AVG(${OCCUPANCY})) AS avgOccupancy
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw
@@ -385,10 +392,10 @@ export async function getTodayVsTypical(
       SELECT
         CAST(strftime('%H', datetime(timestamp, ?)) AS INTEGER) * 60
           + CAST(strftime('%M', datetime(timestamp, ?)) AS INTEGER) AS minuteOfDay,
-        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN occupancy END)) AS todayOccupancy,
-        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN CAST(occupancy AS REAL) / capacity * 100 END)) AS todayPercentage,
-        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN occupancy END)) AS typicalOccupancy,
-        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN CAST(occupancy AS REAL) / capacity * 100 END)) AS typicalPercentage
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN ${OCCUPANCY} END)) AS todayOccupancy,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) = ?  THEN ${OCCUPANCY_PCT} END)) AS todayPercentage,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN ${OCCUPANCY} END)) AS typicalOccupancy,
+        ROUND(AVG(CASE WHEN strftime('%Y-%m-%d', datetime(timestamp, ?)) <> ? THEN ${OCCUPANCY_PCT} END)) AS typicalPercentage
       FROM readings
       WHERE venue_id = ?
         AND capacity > 0

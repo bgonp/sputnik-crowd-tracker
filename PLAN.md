@@ -41,11 +41,11 @@ CREATE TABLE readings (
   timestamp   TEXT    NOT NULL,     -- ISO 8601
   venue_id    INTEGER NOT NULL,
   venue_name  TEXT    NOT NULL,
-  occupancy   INTEGER,
+  occupancy   INTEGER,              -- raw; negatives stored as-is, clamped to 0 on read
   entries     INTEGER,              -- cumulative daily counter
   exits       INTEGER,              -- cumulative daily counter
   capacity    INTEGER
-  -- percentage computed on demand: occupancy / capacity * 100
+  -- percentage computed on demand: MAX(occupancy, 0) / capacity * 100
 );
 
 -- Companion tables, populated by `sync-venues` from observed readings + the
