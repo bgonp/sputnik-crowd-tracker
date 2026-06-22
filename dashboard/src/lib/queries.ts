@@ -189,7 +189,7 @@ export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {
       FROM readings
       WHERE venue_id IN (${placeholders}) AND capacity > 0
       GROUP BY dayRaw, hour
-      HAVING hour >= 7
+      HAVING hour >= 6
       ORDER BY dayRaw, hour
     `,
     args: [offsetMod, offsetMod, ...venueIds],

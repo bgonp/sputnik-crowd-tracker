@@ -128,11 +128,11 @@ describe("getHeatmap", () => {
     expect(result.avgPercentage).toBe(72);
   });
 
-  it("filters out pre-opening hours in SQL", async () => {
+  it("keeps from the 06:00 column on in SQL (a leading closed column)", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
     await getHeatmap([1]);
     const { sql } = vi.mocked(db.execute).mock.calls[0][0] as unknown as { sql: string };
-    expect(sql).toMatch(/HAVING hour >= 7/i);
+    expect(sql).toMatch(/HAVING hour >= 6/i);
   });
 });
 

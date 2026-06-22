@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { HeatmapCell, VenueHours } from "@/lib/queries";
 import { HeatmapChart } from "../HeatmapChart";
 
-// Venue 1: every day open 07:00–23:00, so nothing gets cropped.
+// Venue 1: every day open 07:00–23:00.
 const allDayHours: VenueHours[] = Array.from({ length: 7 }, (_, dow) => ({
   venueId: 1,
   dow,
@@ -29,15 +29,24 @@ describe("HeatmapChart", () => {
     expect(cell.className).not.toContain("bg-muted");
   });
 
-  it("renders an empty grid (all 'Sin datos') when given no data but the venue is open", () => {
+  it("renders the 06:00 column as the leading (closed) column", () => {
     render(<HeatmapChart data={[]} venueId={1} hours={allDayHours} />);
-    // Every open cell with no reading gets the "Sin datos" title.
-    expect(screen.getAllByTitle("Sin datos").length).toBeGreaterThan(0);
+    // The hour header starts at 06 (sliced to its first two chars).
+    const headers = screen.getAllByText("06");
+    expect(headers.length).toBeGreaterThan(0);
+    // Monday 06:00 is before the 07:00 opening, so it's flagged closed.
+    expect(screen.getByTitle("Lun 06:00: cerrado")).toBeInTheDocument();
+  });
+
+  it("renders open cells with no reading as 'Sin datos', not as closed", () => {
+    render(<HeatmapChart data={[]} venueId={1} hours={allDayHours} />);
+    // Open hours 07–22 across all 7 days = 16 × 7 = 112 (06:00 and 23:00 are closed).
+    expect(screen.getAllByTitle("Sin datos").length).toBe(112);
     expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
   });
 
-  it("blanks out cells outside the venue's open window", () => {
-    // Sunday (dow 0 / day 6) closed; weekdays open 09:00–14:00.
+  it("flags cells outside the venue's open window as closed", () => {
+    // Sunday (dow 0 / day 6) closed; weekdays + Saturday open 09:00–14:00.
     const hours: VenueHours[] = [
       { venueId: 1, dow: 0, openMin: 0, closeMin: 0 },
       ...[1, 2, 3, 4, 5].map((dow) => ({ venueId: 1, dow, openMin: 9 * 60, closeMin: 14 * 60 })),
@@ -45,15 +54,19 @@ describe("HeatmapChart", () => {
     ];
     render(<HeatmapChart data={[]} venueId={1} hours={hours} />);
 
-    // Open cells render as "Sin datos"; closed cells are blank spacers. Open
-    // hours 09–13 (the 14:00 cell is closed) across Mon–Sat = 5 × 6 = 30. Sunday
-    // is fully closed, so it contributes none — a count of 30 (not 35) confirms it.
+    // Open hours 09–13 (the 14:00 cell is closed) across Mon–Sat = 5 × 6 = 30.
+    // Sunday is fully closed, so it contributes none — a count of 30 confirms it.
     expect(screen.getAllByTitle("Sin datos").length).toBe(30);
+
+    // The early-morning hours and Sunday render as flagged-closed cells.
+    expect(screen.getByTitle("Lun 07:00: cerrado")).toBeInTheDocument();
+    expect(screen.getByTitle("Dom 12:00: cerrado")).toBeInTheDocument();
   });
 
   it("treats a venue with no configured hours as fully open (fail-safe)", () => {
     render(<HeatmapChart data={[]} venueId={1} hours={[]} />);
-    // 17 hours (07–23) × 7 days, all rendered as open "Sin datos" cells.
-    expect(screen.getAllByTitle("Sin datos").length).toBe(17 * 7);
+    // 18 hours (06–23) × 7 days, all rendered as open "Sin datos" cells.
+    expect(screen.getAllByTitle("Sin datos").length).toBe(18 * 7);
+    expect(screen.queryByTitle(/cerrado$/)).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { DAY_LABELS, HOUR_LABELS, OPENING_HOUR } from "@/lib/labels";
+import { DAY_LABELS, HEATMAP_FIRST_HOUR, HOUR_LABELS } from "@/lib/labels";
 import { isHeatmapCellOpen } from "@/lib/open-status";
 import type { HeatmapCell, VenueHours } from "@/lib/queries";
 
@@ -26,7 +26,7 @@ export function HeatmapChart({
       <div className="min-w-max">
         <div className="flex">
           <div className="w-8 m-px" />
-          {HOUR_LABELS.slice(OPENING_HOUR).map((label, i) => (
+          {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((label, i) => (
             <div key={i} className="w-8 m-px text-center text-[10px] text-muted-foreground">
               {label.slice(0, 2)}
             </div>
@@ -35,12 +35,19 @@ export function HeatmapChart({
         {DAY_LABELS.map((day, d) => (
           <div key={d} className="flex items-center gap-0">
             <div className="w-8 text-[11px] text-muted-foreground text-right pr-1">{day}</div>
-            {HOUR_LABELS.slice(OPENING_HOUR).map((_, i) => {
-              const h = i + OPENING_HOUR;
-              // Outside the venue's open window: render a blank spacer (no muted
-              // "no data" box) so the grid shows only the hours it was open.
+            {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((_, i) => {
+              const h = i + HEATMAP_FIRST_HOUR;
+              // Outside the venue's open window: render a faint cell flagged as
+              // closed, so the grid clearly shows the gym was closed then rather
+              // than looking like missing data or a cropped chart.
               if (!isHeatmapCellOpen(hours, venueId, d, h)) {
-                return <div key={h} className="w-8 h-6 m-px" />;
+                return (
+                  <div
+                    key={h}
+                    title={`${day} ${HOUR_LABELS[h]}: cerrado`}
+                    className="w-8 h-6 m-px rounded-sm bg-muted/40"
+                  />
+                );
               }
               const pct = lookup.get(`${d}-${h}`) ?? 0;
               return (

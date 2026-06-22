@@ -2,7 +2,12 @@ export const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 export const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
   `${String(i).padStart(2, "0")}:00`
 );
-export const OPENING_HOUR = 7;
+/**
+ * First hour column shown in the heatmap. Set one hour before the earliest venue
+ * opening (07:00) so the grid always carries a leading closed column — that makes
+ * it read as "the gym is closed here", not as a cropped chart.
+ */
+export const HEATMAP_FIRST_HOUR = 6;
 
 // Monday-indexed (matches DAY_LABELS / the Madrid weekday helpers).
 export const FULL_DAY_LABELS = [
