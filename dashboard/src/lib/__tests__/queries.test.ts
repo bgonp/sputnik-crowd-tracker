@@ -7,6 +7,7 @@ import {
   getHeatmap,
   getTimeSeries,
   getTodayVisitorCounts,
+  getWeekdayFootfall,
   getTodayVsTypical,
   getDatesWithData,
   getLiveReadings,
@@ -97,6 +98,45 @@ describe("getHourlyAverages", () => {
     await getHourlyAverages([1]);
     const { sql } = vi.mocked(db.execute).mock.calls[0][0] as unknown as { sql: string };
     expect(sql).toMatch(/HAVING hour >= 7/i);
+  });
+});
+
+// --- getWeekdayFootfall ---
+
+describe("getWeekdayFootfall", () => {
+  it("maps the raw weekday to Monday-indexed and returns avgVisitors + sampleDays", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(
+      fakeResult([
+        { dayRaw: 1, avgVisitors: 120, sampleDays: 8 }, // Monday
+        { dayRaw: 0, avgVisitors: 300, sampleDays: 7 }, // Sunday
+        { dayRaw: 6, avgVisitors: 280, sampleDays: 8 }, // Saturday
+      ])
+    );
+    const rows = await getWeekdayFootfall(7, new Date("2026-06-22T12:00:00Z"));
+    expect(rows).toEqual([
+      { day: 0, avgVisitors: 120, sampleDays: 8 }, // Mon
+      { day: 6, avgVisitors: 300, sampleDays: 7 }, // Sun
+      { day: 5, avgVisitors: 280, sampleDays: 8 }, // Sat
+    ]);
+  });
+
+  it("averages per-day MAX(entries) by weekday and counts the sample days, venue-bound and window-ranged", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getWeekdayFootfall(7, new Date("2026-06-22T12:00:00Z"), 8);
+    const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    // Inner query totals each day, outer averages those by weekday and counts them.
+    expect(sql).toMatch(/MAX\(entries\) AS dailyTotal/i);
+    expect(sql).toMatch(/AVG\(dailyTotal\)/i);
+    expect(sql).toMatch(/COUNT\(\*\) AS sampleDays/i);
+    expect(sql).toMatch(/GROUP BY dayRaw/i);
+    expect(sql).toMatch(/timestamp >= \?/i);
+    expect(args).toContain(7); // venue id bound, not interpolated
+    expect(sql).not.toContain("7");
+    // Lower bound is 8 weeks (56 days) before now.
+    expect(args).toContain("2026-04-27T12:00:00.000Z");
   });
 });
 

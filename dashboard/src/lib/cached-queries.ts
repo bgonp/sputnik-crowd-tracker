@@ -4,6 +4,7 @@ import {
   getVenueHours,
   getLiveReadings,
   getTodayVisitorCounts,
+  getWeekdayFootfall,
   getHeatmap,
   getTodayVsTypical,
   getDatesWithData,
@@ -33,6 +34,15 @@ export const getCachedTodayVisitorCounts = unstable_cache(
 export const getCachedHeatmap = unstable_cache(getHeatmap, ["heatmap"], {
   revalidate: 300,
 });
+
+// Per-weekday averages over an 8-week window — the set shifts at most once a
+// day, so the caller keys on a day-stable ISO (`<today>T12:00:00Z`) and we
+// revalidate on the aggregate cadence to keep Turso reads low.
+export const getCachedWeekdayFootfall = unstable_cache(
+  (venueId: number, dayIso: string) => getWeekdayFootfall(venueId, new Date(dayIso)),
+  ["weekday-footfall"],
+  { revalidate: 300 }
+);
 
 // The picker's selectable days change at most once a day, so the caller keys on
 // a day-stable ISO (`<today>T12:00:00Z`) and we cache for an hour like venues.
