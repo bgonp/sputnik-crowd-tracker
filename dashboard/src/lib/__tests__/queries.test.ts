@@ -7,6 +7,7 @@ import {
   getHeatmap,
   getTimeSeries,
   getTodayVisitorCounts,
+  getWeekdayFootfall,
   getTodayVsTypical,
   getDatesWithData,
   getLiveReadings,
@@ -97,6 +98,44 @@ describe("getHourlyAverages", () => {
     await getHourlyAverages([1]);
     const { sql } = vi.mocked(db.execute).mock.calls[0][0] as unknown as { sql: string };
     expect(sql).toMatch(/HAVING hour >= 7/i);
+  });
+});
+
+// --- getWeekdayFootfall ---
+
+describe("getWeekdayFootfall", () => {
+  it("maps the raw weekday to Monday-indexed and returns avgVisitors", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(
+      fakeResult([
+        { dayRaw: 1, avgVisitors: 120 }, // Monday
+        { dayRaw: 0, avgVisitors: 300 }, // Sunday
+        { dayRaw: 6, avgVisitors: 280 }, // Saturday
+      ])
+    );
+    const rows = await getWeekdayFootfall(7, new Date("2026-06-22T12:00:00Z"));
+    expect(rows).toEqual([
+      { day: 0, avgVisitors: 120 }, // Mon
+      { day: 6, avgVisitors: 300 }, // Sun
+      { day: 5, avgVisitors: 280 }, // Sat
+    ]);
+  });
+
+  it("averages per-day MAX(entries) by weekday, venue-bound and window-ranged", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await getWeekdayFootfall(7, new Date("2026-06-22T12:00:00Z"), 8);
+    const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
+      sql: string;
+      args: unknown[];
+    };
+    // Inner query totals each day, outer averages those by weekday.
+    expect(sql).toMatch(/MAX\(entries\) AS dailyTotal/i);
+    expect(sql).toMatch(/AVG\(dailyTotal\)/i);
+    expect(sql).toMatch(/GROUP BY dayRaw/i);
+    expect(sql).toMatch(/timestamp >= \?/i);
+    expect(args).toContain(7); // venue id bound, not interpolated
+    expect(sql).not.toContain("7");
+    // Lower bound is 8 weeks (56 days) before now.
+    expect(args).toContain("2026-04-27T12:00:00.000Z");
   });
 });
 

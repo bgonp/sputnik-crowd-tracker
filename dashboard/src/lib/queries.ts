@@ -7,6 +7,7 @@ import {
   TYPICAL_WEEKS,
   SELECTABLE_DAYS,
 } from "./today-vs-typical";
+import { WEEKDAY_FOOTFALL_WEEKS } from "./weekday-footfall";
 
 function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
@@ -69,6 +70,11 @@ export interface LiveReading {
 export interface DailyVisitorCount {
   venueId: number;
   total: number;
+}
+
+export interface WeekdayFootfall {
+  day: number; // Monday-indexed: 0 = Monday … 6 = Sunday
+  avgVisitors: number; // mean daily footfall for that weekday over the window
 }
 
 /** True for a "no such table" error — the only case the venue queries tolerate
@@ -175,6 +181,51 @@ export async function getTodayVisitorCounts(now = new Date()): Promise<DailyVisi
     args: [offsetMod, now.toISOString(), offsetMod],
   });
   return toPlain<DailyVisitorCount>(result.rows);
+}
+
+/**
+ * Average daily footfall per weekday for one venue, over the last
+ * `weeks` weeks — the chart that answers "which day of the week is busiest /
+ * quietest here?".
+ *
+ * `entries` is a per-day cumulative counter, so a day's footfall is its
+ * `MAX(entries)`; the inner query reduces each Madrid date to that total, and
+ * the outer query averages those totals by weekday (so each weekday is the mean
+ * of its ~`weeks` recent occurrences, e.g. the last 8 Mondays). The scan is
+ * bounded by a single `timestamp >=` lower bound, so it stays a tight tail scan.
+ *
+ * One Turso read. The window depends on `now` only at day granularity, so the
+ * cache keys on a day-stable ISO and revalidates on the aggregate cadence.
+ */
+export async function getWeekdayFootfall(
+  venueId: number,
+  now = new Date(),
+  weeks = WEEKDAY_FOOTFALL_WEEKS
+): Promise<WeekdayFootfall[]> {
+  const offsetMod = madridOffsetModifier(now);
+  const from = new Date(now.getTime() - weeks * 7 * 86_400_000).toISOString();
+  const result = await db.execute({
+    sql: `
+      SELECT dayRaw, ROUND(AVG(dailyTotal)) AS avgVisitors
+      FROM (
+        SELECT
+          CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
+          strftime('%Y-%m-%d', datetime(timestamp, ?)) AS date,
+          MAX(entries) AS dailyTotal
+        FROM readings
+        WHERE venue_id = ? AND capacity > 0 AND timestamp >= ?
+        GROUP BY date
+        HAVING dailyTotal IS NOT NULL
+      )
+      GROUP BY dayRaw
+      ORDER BY dayRaw
+    `,
+    args: [offsetMod, offsetMod, venueId, from],
+  });
+  return toPlain<{ dayRaw: number; avgVisitors: number }>(result.rows).map((r) => ({
+    day: r.dayRaw === 0 ? 6 : r.dayRaw - 1,
+    avgVisitors: r.avgVisitors,
+  }));
 }
 
 export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {
