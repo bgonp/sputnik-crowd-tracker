@@ -30,3 +30,30 @@ const madridTimeFormatter = new Intl.DateTimeFormat("es-ES", {
 export function formatMadridTime(iso: string): string {
   return madridTimeFormatter.format(new Date(iso));
 }
+
+/**
+ * How old the freshest reading may get before the UI flags it as not-current.
+ * Mirrors the data-collection freshness monitor's default so the dashboard
+ * tells the same story: data older than this means collection has stalled.
+ */
+export const STALE_AFTER_MINUTES = 15;
+
+/**
+ * Whether the last-updated stamp should be flagged as stale (data no longer
+ * arriving). `expectFresh` reflects whether data is *supposed* to be flowing
+ * right now — outside open hours the newest reading is from closing time, which
+ * is expectedly old, so we never alarm then (mirrors the collector's overnight
+ * grace). Only flag when fresh data is expected and the reading has aged past
+ * the threshold.
+ */
+export function isLastUpdatedStale(
+  latestIso: string | null,
+  now: Date,
+  expectFresh: boolean,
+  thresholdMinutes = STALE_AFTER_MINUTES
+): boolean {
+  if (!latestIso || !expectFresh) return false;
+  const latestMs = new Date(latestIso).getTime();
+  if (!Number.isFinite(latestMs)) return false;
+  return (now.getTime() - latestMs) / 60_000 > thresholdMinutes;
+}

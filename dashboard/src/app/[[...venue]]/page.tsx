@@ -17,7 +17,7 @@ import {
   getCachedTodayVisitorCounts,
   getCachedDatesWithData,
 } from "@/lib/cached-queries";
-import { madridMoment, openWindowFor } from "@/lib/open-status";
+import { madridMoment, openWindowFor, anyVenueOpenAt } from "@/lib/open-status";
 import {
   SELECTABLE_DAYS,
   madridDateString,
@@ -26,8 +26,19 @@ import {
   recentMadridDates,
   resolveSelectedDate,
 } from "@/lib/today-vs-typical";
-import { TODAY_LABEL, lastWeekdaysLabel, dateLineLabel, lastUpdatedLabel } from "@/lib/labels";
-import { latestReadingTimestamp, formatMadridTime } from "@/lib/last-updated";
+import {
+  TODAY_LABEL,
+  lastWeekdaysLabel,
+  dateLineLabel,
+  lastUpdatedLabel,
+  staleUpdateLabel,
+} from "@/lib/labels";
+import {
+  latestReadingTimestamp,
+  formatMadridTime,
+  isLastUpdatedStale,
+  STALE_AFTER_MINUTES,
+} from "@/lib/last-updated";
 import { DaySelector } from "@/components/DaySelector";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
@@ -142,6 +153,19 @@ export default async function Home({ params, searchParams }: Props) {
   // Freshest reading across venues = the last successful scrape cycle. Surfaced
   // as a single "Actualizado a las HH:MM" stamp; re-renders with the 60s refresh.
   const lastUpdated = latestReadingTimestamp(liveReadings);
+  // Flag the stamp as stale only when data is *expected* to be flowing — i.e.
+  // some venue was open within the staleness window. The look-back grace mirrors
+  // the collector's monitor: it avoids false alarms overnight and just after
+  // opening (before the first reading of the day lands).
+  const graceMoment = madridMoment(
+    new Date(now.getTime() - STALE_AFTER_MINUTES * 60_000)
+  );
+  const expectFresh = anyVenueOpenAt(
+    venueHours,
+    liveReadings.map((r) => r.venueId),
+    graceMoment
+  );
+  const lastUpdatedStale = isLastUpdatedStale(lastUpdated, now, expectFresh);
 
   // Per-venue chart inputs (only consumed when a venue is selected).
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
@@ -177,8 +201,22 @@ export default async function Home({ params, searchParams }: Props) {
             Aforo en tiempo real — todos los centros
           </h2>
           {lastUpdated && (
-            <p className="text-xs text-muted-foreground whitespace-nowrap">
-              {lastUpdatedLabel(formatMadridTime(lastUpdated))}
+            <p
+              className={`flex items-center gap-1.5 text-xs whitespace-nowrap ${
+                lastUpdatedStale
+                  ? "font-medium text-amber-600 dark:text-amber-500"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {lastUpdatedStale && (
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full bg-amber-500"
+                />
+              )}
+              {lastUpdatedStale
+                ? staleUpdateLabel(formatMadridTime(lastUpdated))
+                : lastUpdatedLabel(formatMadridTime(lastUpdated))}
             </p>
           )}
         </div>

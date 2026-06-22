@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { latestReadingTimestamp, formatMadridTime } from "../last-updated";
+import {
+  latestReadingTimestamp,
+  formatMadridTime,
+  isLastUpdatedStale,
+  STALE_AFTER_MINUTES,
+} from "../last-updated";
 
 describe("latestReadingTimestamp", () => {
   it("returns null for no readings", () => {
@@ -36,5 +41,45 @@ describe("formatMadridTime", () => {
   it("pads single-digit hours and minutes", () => {
     // 07:05 UTC → 09:05 Madrid (DST).
     expect(formatMadridTime("2026-06-22T07:05:00.000Z")).toBe("09:05");
+  });
+});
+
+describe("isLastUpdatedStale", () => {
+  const now = new Date("2026-06-22T17:42:00.000Z");
+
+  it("is not stale when the reading is within the threshold", () => {
+    const recent = new Date(now.getTime() - 5 * 60_000).toISOString();
+    expect(isLastUpdatedStale(recent, now, true)).toBe(false);
+  });
+
+  it("is stale when fresh data is expected but the reading aged past the threshold", () => {
+    const old = new Date(now.getTime() - 25 * 60_000).toISOString();
+    expect(isLastUpdatedStale(old, now, true)).toBe(true);
+  });
+
+  it("is never stale when fresh data is not expected (e.g. all venues closed)", () => {
+    const old = new Date(now.getTime() - 6 * 60 * 60_000).toISOString();
+    expect(isLastUpdatedStale(old, now, false)).toBe(false);
+  });
+
+  it("treats exactly the threshold as still fresh (strictly greater is stale)", () => {
+    const atThreshold = new Date(
+      now.getTime() - STALE_AFTER_MINUTES * 60_000
+    ).toISOString();
+    expect(isLastUpdatedStale(atThreshold, now, true)).toBe(false);
+    const justOver = new Date(
+      now.getTime() - (STALE_AFTER_MINUTES * 60_000 + 1_000)
+    ).toISOString();
+    expect(isLastUpdatedStale(justOver, now, true)).toBe(true);
+  });
+
+  it("is not stale when there is no reading", () => {
+    expect(isLastUpdatedStale(null, now, true)).toBe(false);
+  });
+
+  it("honours a custom threshold", () => {
+    const old = new Date(now.getTime() - 10 * 60_000).toISOString();
+    expect(isLastUpdatedStale(old, now, true, 5)).toBe(true);
+    expect(isLastUpdatedStale(old, now, true, 20)).toBe(false);
   });
 });
