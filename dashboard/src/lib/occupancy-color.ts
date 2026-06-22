@@ -50,3 +50,18 @@ export function occupancyGradientStops(
   }
   return stops;
 }
+
+/**
+ * A CSS `linear-gradient(...)` spanning the full 0→100% occupancy scale, for
+ * decorative fills (e.g. the title) that should read on the same green→red
+ * scale as the charts. Green (low) sits at the start, red (high) at the end;
+ * the colours carry `occupancyColor`'s sqrt easing.
+ */
+export function occupancyScaleGradientCss(direction = "to right", steps = 8): string {
+  const stops: string[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const pct = (i / steps) * 100;
+    stops.push(`${occupancyColor(pct)} ${pct.toFixed(1)}%`);
+  }
+  return `linear-gradient(${direction}, ${stops.join(", ")})`;
+}
