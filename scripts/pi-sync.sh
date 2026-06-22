@@ -18,15 +18,15 @@
 # protection). Wrap the scrape cron with the SAME lock so the two never overlap.
 # cron's PATH is minimal, so prefix the scrape line with one that includes pnpm
 # (adjust to where pnpm lives):
-#   * * * * * PATH=/home/pi/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin flock -n /tmp/sputnik.lock pnpm --dir /home/pi/sputnik-crowd-tracker scrape
+#   * * * * * PATH=/home/bgonp/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin flock -n /tmp/sputnik.lock pnpm --dir /home/bgonp/code/sputnik-crowd-tracker scrape
 #
 # Install (point it at your checkout — either edit the REPO_DIR default below or
 # export SPUTNIK_REPO_DIR), then add to `crontab -e`:
-#   */15 * * * * /home/pi/sputnik-crowd-tracker/scripts/pi-sync.sh >> /home/pi/sputnik-sync.log 2>&1
+#   */15 * * * * /home/bgonp/code/sputnik-crowd-tracker/scripts/pi-sync.sh >> /home/bgonp/sputnik-sync.log 2>&1
 
 set -euo pipefail
 
-REPO_DIR="${SPUTNIK_REPO_DIR:-/home/pi/sputnik-crowd-tracker}"
+REPO_DIR="${SPUTNIK_REPO_DIR:-/home/bgonp/code/sputnik-crowd-tracker}"
 BRANCH="main"
 LOCK="${SPUTNIK_LOCK:-/tmp/sputnik.lock}"
 
