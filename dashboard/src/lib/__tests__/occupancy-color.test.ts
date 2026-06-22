@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { occupancyColor, occupancyGradientStops } from "../occupancy-color";
+import {
+  occupancyColor,
+  occupancyGradientStops,
+  occupancyScaleGradientCss,
+} from "../occupancy-color";
 
 describe("occupancyColor", () => {
   it("maps 0% to green (hue 120) and 100% to red (hue 0)", () => {
@@ -39,5 +43,22 @@ describe("occupancyGradientStops", () => {
     expect(stops[stops.length - 1]).toEqual({ offset: 1, color: occupancyColor(10) });
     // Midpoint offset maps to the midpoint value (90 → 10 spans 80).
     expect(stops[2]).toEqual({ offset: 0.5, color: occupancyColor(50) });
+  });
+});
+
+describe("occupancyScaleGradientCss", () => {
+  it("spans the full 0→100% scale, green start to red end", () => {
+    const css = occupancyScaleGradientCss("to right", 4);
+    expect(css).toBe(
+      `linear-gradient(to right, ${occupancyColor(0)} 0.0%, ${occupancyColor(25)} 25.0%, ${occupancyColor(50)} 50.0%, ${occupancyColor(75)} 75.0%, ${occupancyColor(100)} 100.0%)`
+    );
+  });
+
+  it("defaults to a left-to-right gradient", () => {
+    expect(occupancyScaleGradientCss()).toContain("linear-gradient(to right,");
+  });
+
+  it("honours a custom direction", () => {
+    expect(occupancyScaleGradientCss("135deg")).toContain("linear-gradient(135deg,");
   });
 });

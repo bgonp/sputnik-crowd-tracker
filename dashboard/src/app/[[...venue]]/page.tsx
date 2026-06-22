@@ -40,6 +40,7 @@ import {
 } from "@/lib/last-updated";
 import { DaySelector } from "@/components/DaySelector";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
+import { occupancyScaleGradientCss } from "@/lib/occupancy-color";
 import type { Venue } from "@/lib/queries";
 import {
   type SearchParams,
@@ -186,8 +187,12 @@ export default async function Home({ params, searchParams }: Props) {
       <AutoRefresh intervalMs={60_000} />
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Sputnik Climbing</h1>
-          <p className="text-muted-foreground text-sm">Seguimiento de aforo</p>
+          <h1
+            className="text-2xl font-bold bg-clip-text text-transparent w-fit"
+            style={{ backgroundImage: occupancyScaleGradientCss() }}
+          >
+            Sputnik Climbing
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -197,7 +202,7 @@ export default async function Home({ params, searchParams }: Props) {
       <section>
         <div className="flex items-baseline justify-between gap-3 mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Aforo en tiempo real — todos los centros
+            Aforo en tiempo real - todos los rocódromos
           </h2>
           {lastUpdated && (
             <p
