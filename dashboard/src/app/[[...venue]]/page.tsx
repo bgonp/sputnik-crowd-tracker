@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { CalendarDays, LineChart } from "lucide-react";
+import { CalendarDays, LineChart, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
@@ -31,7 +31,6 @@ import {
   lastWeekdaysLabel,
   dateLineLabel,
   lastUpdatedLabel,
-  staleUpdateLabel,
 } from "@/lib/labels";
 import {
   latestReadingTimestamp,
@@ -209,14 +208,9 @@ export default async function Home({ params, searchParams }: Props) {
               }`}
             >
               {lastUpdatedStale && (
-                <span
-                  aria-hidden
-                  className="size-1.5 rounded-full bg-amber-500"
-                />
+                <AlertTriangle aria-hidden className="size-3.5" />
               )}
-              {lastUpdatedStale
-                ? staleUpdateLabel(formatMadridTime(lastUpdated))
-                : lastUpdatedLabel(formatMadridTime(lastUpdated))}
+              {lastUpdatedLabel(formatMadridTime(lastUpdated))}
             </p>
           )}
         </div>

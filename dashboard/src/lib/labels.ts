@@ -27,14 +27,6 @@ export function lastUpdatedLabel(madridTime: string): string {
   return `Actualizado a las ${madridTime}`;
 }
 
-/**
- * "Sin actualizar desde las 19:42" — shown in place of the normal stamp when
- * the data has stopped refreshing, to flag it's no longer current.
- */
-export function staleUpdateLabel(madridTime: string): string {
-  return `Sin actualizar desde las ${madridTime}`;
-}
-
 /** Lowercase Spanish month abbreviations, January-indexed. */
 export const MONTH_LABELS = [
   "ene",
