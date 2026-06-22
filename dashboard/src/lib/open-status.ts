@@ -59,6 +59,25 @@ export function openWindowFor(
   return row ? { openMin: row.openMin, closeMin: row.closeMin } : null;
 }
 
+/**
+ * Whether the heatmap cell for `hour` — spanning [hour:00, hour+1:00) — on
+ * Monday-indexed `day` (0 = Monday … 6 = Sunday) falls inside the venue's open
+ * window, so the grid can blank out closed-hour cells. A day with no configured
+ * hours is treated as fully open (same fail-safe as `openWindowFor`/`openStatusFor`),
+ * so nothing is cropped before `venue_hours` is populated.
+ */
+export function isHeatmapCellOpen(
+  hours: VenueHours[],
+  venueId: number,
+  day: number,
+  hour: number
+): boolean {
+  const window = openWindowFor(hours, venueId, (day + 1) % 7);
+  if (!window) return true;
+  // The cell is open when its hour span overlaps the [openMin, closeMin) window.
+  return window.openMin < (hour + 1) * 60 && window.closeMin > hour * 60;
+}
+
 export interface OpenStatus {
   open: boolean;
   /** "HH:MM" of the venue's next opening, when currently closed and one is known. */

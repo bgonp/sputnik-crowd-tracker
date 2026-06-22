@@ -3,6 +3,7 @@ import type { VenueHours } from "../queries";
 import {
   madridMoment,
   formatMinute,
+  isHeatmapCellOpen,
   openStatusFor,
   openWindowFor,
   type MadridMoment,
@@ -77,5 +78,28 @@ describe("openWindowFor", () => {
   it("returns null when the venue has no row for that weekday (skip cropping)", () => {
     expect(openWindowFor(hours, 99, 1)).toBeNull();
     expect(openWindowFor([], 1, 1)).toBeNull();
+  });
+});
+
+describe("isHeatmapCellOpen", () => {
+  // day is Monday-indexed: 0 = Monday … 5 = Saturday, 6 = Sunday.
+  it("opens cells whose hour span overlaps the day's window", () => {
+    // Wednesday (day 2 → dow 3) open 07:00–23:00.
+    expect(isHeatmapCellOpen(hours, 1, 2, 7)).toBe(true); // 07:00 cell
+    expect(isHeatmapCellOpen(hours, 1, 2, 22)).toBe(true); // 22:00–23:00 cell
+  });
+
+  it("closes the cell at the closing hour and before opening", () => {
+    // Wednesday closes at 23:00, so the 23:00 cell ([23:00,24:00)) is closed.
+    expect(isHeatmapCellOpen(hours, 1, 2, 23)).toBe(false);
+    // Sunday (day 6 → dow 0) opens at 09:00, so the 08:00 cell is closed.
+    expect(isHeatmapCellOpen(hours, 1, 6, 8)).toBe(false);
+    // Saturday (day 5 → dow 6) closes at 22:00, so the 22:00 cell is closed.
+    expect(isHeatmapCellOpen(hours, 1, 5, 22)).toBe(false);
+  });
+
+  it("treats a day with no configured hours as fully open (fail-safe)", () => {
+    expect(isHeatmapCellOpen(hours, 99, 0, 3)).toBe(true);
+    expect(isHeatmapCellOpen([], 1, 0, 23)).toBe(true);
   });
 });

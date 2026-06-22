@@ -1,7 +1,8 @@
 "use client";
 
-import { DAY_LABELS, HOUR_LABELS, OPENING_HOUR } from "@/lib/labels";
-import type { HeatmapCell } from "@/lib/queries";
+import { DAY_LABELS, HEATMAP_FIRST_HOUR, HOUR_LABELS } from "@/lib/labels";
+import { isHeatmapCellOpen } from "@/lib/open-status";
+import type { HeatmapCell, VenueHours } from "@/lib/queries";
 
 function cellStyle(pct: number): React.CSSProperties {
   if (pct === 0) return {};
@@ -9,7 +10,15 @@ function cellStyle(pct: number): React.CSSProperties {
   return { backgroundColor: `hsl(${hue.toFixed(1)} 70% 60%)` };
 }
 
-export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
+export function HeatmapChart({
+  data,
+  venueId,
+  hours,
+}: {
+  data: HeatmapCell[];
+  venueId: number;
+  hours: VenueHours[];
+}) {
   const lookup = new Map(data.map((d) => [`${d.day}-${d.hour}`, d.avgPercentage]));
 
   return (
@@ -17,7 +26,7 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
       <div className="min-w-max">
         <div className="flex">
           <div className="w-8 m-px" />
-          {HOUR_LABELS.slice(OPENING_HOUR).map((label, i) => (
+          {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((label, i) => (
             <div key={i} className="w-8 m-px text-center text-[10px] text-muted-foreground">
               {label.slice(0, 2)}
             </div>
@@ -26,8 +35,25 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
         {DAY_LABELS.map((day, d) => (
           <div key={d} className="flex items-center gap-0">
             <div className="w-8 text-[11px] text-muted-foreground text-right pr-1">{day}</div>
-            {HOUR_LABELS.slice(OPENING_HOUR).map((_, i) => {
-              const h = i + OPENING_HOUR;
+            {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((_, i) => {
+              const h = i + HEATMAP_FIRST_HOUR;
+              // Outside the venue's open window: render a diagonally-hatched cell
+              // flagged as closed, so the grid clearly reads as "the gym was closed
+              // then" — distinct from both colored data and the flat muted "Sin
+              // datos" of an open hour with no readings.
+              if (!isHeatmapCellOpen(hours, venueId, d, h)) {
+                return (
+                  <div
+                    key={h}
+                    title={`${day} ${HOUR_LABELS[h]}: cerrado`}
+                    className="w-8 h-6 m-px rounded-sm bg-muted"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(45deg, color-mix(in oklch, var(--color-muted-foreground) 35%, transparent) 0, color-mix(in oklch, var(--color-muted-foreground) 35%, transparent) 1px, transparent 1px, transparent 5px)",
+                    }}
+                  />
+                );
+              }
               const pct = lookup.get(`${d}-${h}`) ?? 0;
               return (
                 <div

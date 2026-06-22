@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   DAY_LABELS,
   HOUR_LABELS,
-  OPENING_HOUR,
+  HEATMAP_FIRST_HOUR,
   FULL_DAY_LABELS,
   MONTH_LABELS,
   lastWeekdaysLabel,
@@ -50,13 +50,13 @@ describe("HOUR_LABELS", () => {
   });
 });
 
-describe("OPENING_HOUR", () => {
-  it("is 7 (gym opens at 07:00 Madrid time)", () => {
-    expect(OPENING_HOUR).toBe(7);
+describe("HEATMAP_FIRST_HOUR", () => {
+  it("is 6 (one hour before the earliest 07:00 opening, for a leading closed column)", () => {
+    expect(HEATMAP_FIRST_HOUR).toBe(6);
   });
 
   it("is a valid index into HOUR_LABELS", () => {
-    expect(HOUR_LABELS[OPENING_HOUR]).toBe("07:00");
+    expect(HOUR_LABELS[HEATMAP_FIRST_HOUR]).toBe("06:00");
   });
 });
 
