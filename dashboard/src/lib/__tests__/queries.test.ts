@@ -364,6 +364,37 @@ describe("getLiveReadings", () => {
   });
 });
 
+// --- negative-occupancy clamping ---
+
+describe("clamps negative occupancy to 0 at read time", () => {
+  // The gym API occasionally reports a physically impossible negative occupancy.
+  // We store it raw but never surface it: every query that reads occupancy must
+  // clamp with MAX(occupancy, 0) so neither the raw value, the derived
+  // percentage, nor any average can go below zero.
+  function sqlOf(): string {
+    const arg = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown;
+    return typeof arg === "string" ? arg : (arg as { sql: string }).sql;
+  }
+
+  const cases: [string, () => Promise<unknown>][] = [
+    ["getLiveReadings", () => getLiveReadings()],
+    ["getHeatmap", () => getHeatmap([1])],
+    ["getTimeSeries", () => getTimeSeries(1, "2024-01-01", "2024-12-31")],
+    ["getHourlyAverages", () => getHourlyAverages([1])],
+    ["getDailyAverages", () => getDailyAverages([1])],
+    ["getTodayVsTypical", () => getTodayVsTypical(1, new Date("2026-06-20T10:00:00Z"))],
+  ];
+
+  it.each(cases)("%s clamps occupancy with MAX(occupancy, 0)", async (_name, run) => {
+    vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
+    await run();
+    const sql = sqlOf();
+    // Clamped, and never the bare (unclamped) column in a value/percentage slot.
+    expect(sql).toMatch(/MAX\(occupancy, 0\)/);
+    expect(sql).not.toMatch(/CAST\(occupancy AS REAL\)/);
+  });
+});
+
 // --- getVenues ---
 
 describe("getVenues", () => {
