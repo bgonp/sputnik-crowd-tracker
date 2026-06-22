@@ -231,11 +231,53 @@ export default async function Home({ params, searchParams }: Props) {
         </Suspense>
       </section>
 
+      <Card>
+        <CardHeader>
+          <div className="flex min-h-7 items-center justify-between gap-3">
+            <CardTitle className="text-base">
+              {dayLabel} vs. media{selectedVenueName && ` — ${selectedVenueName}`}
+            </CardTitle>
+            {selectedVenue && (
+              <DaySelector
+                selected={selectedDate}
+                today={todayStr}
+                minDate={minSelectableDate}
+                availableDates={availableDates}
+                triggerLabel={dayLabel}
+              />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {selectedVenue ? (
+            // Key on the selected day so changing it remounts the boundary and
+            // shows the skeleton while the new day loads, instead of lingering
+            // on the previous day's chart (which reads as a glitch mid-fetch).
+            <Suspense key={selectedDate} fallback={<ChartSkeleton className="h-64" />}>
+              <TodayVsTypicalSection
+                venueId={selectedVenue.id}
+                nowIso={chartNowIso}
+                openMin={openWindow?.openMin ?? null}
+                closeMin={openWindow?.closeMin ?? null}
+                anchorDate={anchorDate}
+                dayLabel={dayLabel}
+                typicalLabel={typicalLabel}
+              />
+            </Suspense>
+          ) : (
+            <ChartPlaceholder
+              className="h-64"
+              icon={<LineChart className="h-6 w-6" />}
+              label="Selecciona un rocódromo para comparar hoy con su media"
+            />
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-8 xl:grid-cols-2 items-start">
         <Card>
           <CardHeader>
-            {/* min-h-7 mirrors the line chart's header, whose day-selector
-                button sets that height — keeps both card titles the same height. */}
+            {/* min-h-7 keeps this title aligned with the footfall card beside it. */}
             <div className="flex min-h-7 items-center">
               <CardTitle className="text-base">
                 Mapa de calor{selectedVenueName && ` — ${selectedVenueName}`}
@@ -260,71 +302,28 @@ export default async function Home({ params, searchParams }: Props) {
 
         <Card>
           <CardHeader>
-            <div className="flex min-h-7 items-center justify-between gap-3">
+            <div className="flex min-h-7 items-center">
               <CardTitle className="text-base">
-                {dayLabel} vs. media{selectedVenueName && ` — ${selectedVenueName}`}
+                Actividad por día de la semana{selectedVenueName && ` — ${selectedVenueName}`}
               </CardTitle>
-              {selectedVenue && (
-                <DaySelector
-                  selected={selectedDate}
-                  today={todayStr}
-                  minDate={minSelectableDate}
-                  availableDates={availableDates}
-                  triggerLabel={dayLabel}
-                />
-              )}
             </div>
           </CardHeader>
           <CardContent>
             {selectedVenue ? (
-              // Key on the selected day so changing it remounts the boundary and
-              // shows the skeleton while the new day loads, instead of lingering
-              // on the previous day's chart (which reads as a glitch mid-fetch).
-              <Suspense key={selectedDate} fallback={<ChartSkeleton className="h-64" />}>
-                <TodayVsTypicalSection
-                  venueId={selectedVenue.id}
-                  nowIso={chartNowIso}
-                  openMin={openWindow?.openMin ?? null}
-                  closeMin={openWindow?.closeMin ?? null}
-                  anchorDate={anchorDate}
-                  dayLabel={dayLabel}
-                  typicalLabel={typicalLabel}
-                />
+              <Suspense fallback={<ChartSkeleton className="h-64" />}>
+                <WeekdayFootfallSection venueId={selectedVenue.id} dayIso={dayKeyIso} />
               </Suspense>
             ) : (
               <ChartPlaceholder
+                variant="grid"
                 className="h-64"
-                icon={<LineChart className="h-6 w-6" />}
-                label="Selecciona un rocódromo para comparar hoy con su media"
+                icon={<BarChart3 className="h-6 w-6" />}
+                label="Selecciona un rocódromo para ver su día más y menos concurrido"
               />
             )}
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex min-h-7 items-center">
-            <CardTitle className="text-base">
-              Actividad por día de la semana{selectedVenueName && ` — ${selectedVenueName}`}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {selectedVenue ? (
-            <Suspense fallback={<ChartSkeleton className="h-64" />}>
-              <WeekdayFootfallSection venueId={selectedVenue.id} dayIso={dayKeyIso} />
-            </Suspense>
-          ) : (
-            <ChartPlaceholder
-              variant="grid"
-              className="h-64"
-              icon={<BarChart3 className="h-6 w-6" />}
-              label="Selecciona un rocódromo para ver su día más y menos concurrido"
-            />
-          )}
-        </CardContent>
-      </Card>
     </main>
   );
 }
