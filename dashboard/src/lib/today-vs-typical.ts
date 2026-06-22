@@ -20,38 +20,93 @@ export function madridDateString(now: Date): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+/** How many recent days the line chart's date selector offers. */
+export const SELECTABLE_DAYS = 30;
+
+/** UTC-midnight epoch for a `YYYY-MM-DD` string — the anchor used to step whole
+ *  days while keeping the calendar date stable (DST-safe at date granularity). */
+function dateStringToUtcMs(iso: string): number {
+  return Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
+}
+
+/** `YYYY-MM-DD` for a UTC date (the inverse of {@link dateStringToUtcMs}). */
+function utcDateString(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate()
+  ).padStart(2, "0")}`;
+}
+
 /**
- * The local Madrid dates of the previous `weeks` same-weekday occurrences,
- * most recent first (e.g. the last 5 Saturdays before today). Stepping in whole
- * UTC days from a UTC-midnight anchor keeps the weekday stable and is DST-safe
- * at date granularity — the same fidelity the rest of the queries assume.
+ * The previous `weeks` same-weekday dates before `iso`, most recent first (e.g.
+ * the last 5 Saturdays before a Saturday). Stepping in whole UTC days from a
+ * UTC-midnight anchor keeps the weekday stable and is DST-safe at date
+ * granularity — the same fidelity the rest of the queries assume.
  */
-export function sameWeekdayDates(now: Date, weeks: number): string[] {
-  const iso = madridDateString(now);
-  const base = Date.UTC(
-    Number(iso.slice(0, 4)),
-    Number(iso.slice(5, 7)) - 1,
-    Number(iso.slice(8, 10))
-  );
+export function sameWeekdayDatesFromDateString(iso: string, weeks: number): string[] {
+  const base = dateStringToUtcMs(iso);
   const out: string[] = [];
   for (let k = 1; k <= weeks; k++) {
-    const d = new Date(base - k * 7 * 86_400_000);
-    out.push(
-      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
-        d.getUTCDate()
-      ).padStart(2, "0")}`
-    );
+    out.push(utcDateString(new Date(base - k * 7 * 86_400_000)));
   }
   return out;
 }
 
-/** Monday-indexed weekday (0 = Monday … 6 = Sunday) for `now` in Madrid. */
-export function madridWeekdayMondayIndexed(now: Date): number {
-  const iso = madridDateString(now);
-  const dow = new Date(
-    Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)))
-  ).getUTCDay(); // 0 = Sunday … 6 = Saturday
+/** Same as {@link sameWeekdayDatesFromDateString}, anchored on `now`'s Madrid date. */
+export function sameWeekdayDates(now: Date, weeks: number): string[] {
+  return sameWeekdayDatesFromDateString(madridDateString(now), weeks);
+}
+
+/**
+ * The last `count` Madrid dates ending at `now`'s date, most recent first — the
+ * options the chart's day selector offers (today, yesterday, …).
+ */
+export function recentMadridDates(now: Date, count: number): string[] {
+  const base = dateStringToUtcMs(madridDateString(now));
+  const out: string[] = [];
+  for (let k = 0; k < count; k++) {
+    out.push(utcDateString(new Date(base - k * 86_400_000)));
+  }
+  return out;
+}
+
+/**
+ * Validate a `?date=` selector value: returns it when it's one of the last
+ * `count` Madrid dates, otherwise `null` so the caller falls back to today.
+ * Guards against stale, malformed, or hand-edited values driving the query.
+ *
+ * When `availableDates` is given, a *past* day must also have data (today is
+ * always allowed — it's the live default and may have no reading yet), so a
+ * link to an empty day quietly falls back to today instead of plotting nothing.
+ */
+export function resolveSelectedDate(
+  raw: string | string[] | undefined,
+  now: Date,
+  count: number,
+  availableDates?: readonly string[]
+): string | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return null;
+  const recent = recentMadridDates(now, count);
+  if (!recent.includes(value)) return null;
+  if (availableDates && value !== recent[0] && !availableDates.includes(value)) return null;
+  return value;
+}
+
+/** Monday-indexed weekday (0 = Monday … 6 = Sunday) for a Madrid date string. */
+export function mondayIndexedWeekday(iso: string): number {
+  const dow = new Date(dateStringToUtcMs(iso)).getUTCDay(); // 0 = Sunday … 6 = Saturday
   return dow === 0 ? 6 : dow - 1;
+}
+
+/** Sunday-indexed weekday (0 = Sunday … 6 = Saturday) for a Madrid date string,
+ *  matching the `venue_hours.dow` convention used by `openWindowFor`. */
+export function sundayIndexedWeekday(iso: string): number {
+  return new Date(dateStringToUtcMs(iso)).getUTCDay();
+}
+
+/** Monday-indexed weekday for `now` in Madrid. */
+export function madridWeekdayMondayIndexed(now: Date): number {
+  return mondayIndexedWeekday(madridDateString(now));
 }
 
 /** "HH:MM" label for a minute-of-day (e.g. 615 → "10:15"). */

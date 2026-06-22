@@ -27,6 +27,22 @@ export function forwardedQuery(searchParams: SearchParams): string {
   return query ? `?${query}` : "";
 }
 
+// Build the href for the line chart's day selector: set `?date=<value>` on the
+// current path, but drop the param entirely when the default day (today) is
+// chosen so the canonical URL stays clean. Other params (utm_*, etc.) are kept.
+export function dateChangeHref(
+  pathname: string,
+  current: URLSearchParams,
+  value: string,
+  defaultValue: string
+): string {
+  const params = new URLSearchParams(current);
+  if (value === defaultValue) params.delete("date");
+  else params.set("date", value);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 // Parse a legacy `?venue=` value into a venue id. Match only when the whole
 // value is an integer (so "2abc" is rejected, not truncated to 2); pick the
 // first when the param is repeated. Returns null when there's nothing usable.

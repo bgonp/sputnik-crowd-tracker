@@ -18,6 +18,7 @@ vi.mock("@/lib/cached-queries", () => ({
   // Pulled in transitively by the section components rendered on a venue path.
   getCachedHeatmap: vi.fn().mockResolvedValue([]),
   getCachedTodayVsTypical: vi.fn().mockResolvedValue([]),
+  getCachedDatesWithData: vi.fn().mockResolvedValue([]),
 }));
 
 // `notFound` / `permanentRedirect` halt rendering in Next by throwing; mirror

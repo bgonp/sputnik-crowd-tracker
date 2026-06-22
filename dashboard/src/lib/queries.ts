@@ -1,6 +1,12 @@
 import type { Row } from "@libsql/client";
 import { db } from "./db";
-import { sameWeekdayDates, madridDateString, TYPICAL_WEEKS } from "./today-vs-typical";
+import {
+  sameWeekdayDatesFromDateString,
+  recentMadridDates,
+  madridDateString,
+  TYPICAL_WEEKS,
+  SELECTABLE_DAYS,
+} from "./today-vs-typical";
 
 function toPlain<T>(rows: Row[]): T[] {
   return rows.map((r) => ({ ...r })) as T[];
@@ -77,6 +83,37 @@ export interface TodayVsTypicalPoint {
   todayPercentage: number | null;
   typicalOccupancy: number | null;
   typicalPercentage: number | null;
+}
+
+/**
+ * The Madrid dates within the last `days` for which `venueId` has at least one
+ * reading — used to disable empty days in the line chart's date picker, so a
+ * user can't pick a day that returns nothing. Bounded to the picker window and
+ * filtered by `(venue_id, timestamp)` (indexed), so it's a tight scan returning
+ * ≤ `days` rows. The set changes at most once a day, hence the long cache TTL.
+ */
+export async function getDatesWithData(
+  venueId: number,
+  now = new Date(),
+  days = SELECTABLE_DAYS
+): Promise<string[]> {
+  const offsetMod = madridOffsetModifier(now);
+  const window = recentMadridDates(now, days);
+  const floor = window[window.length - 1] ?? madridDateString(now);
+  // A day of slack on the UTC floor covers the timezone shift, matching how the
+  // other date-filtered queries bound their scans.
+  const from = new Date(Date.parse(`${floor}T00:00:00Z`) - 86_400_000).toISOString();
+  const to = now.toISOString();
+  const result = await db.execute({
+    sql: `
+      SELECT DISTINCT strftime('%Y-%m-%d', datetime(timestamp, ?)) AS d
+      FROM readings
+      WHERE venue_id = ? AND timestamp >= ? AND timestamp <= ?
+      ORDER BY d
+    `,
+    args: [offsetMod, venueId, from, to],
+  });
+  return result.rows.map((r) => r.d as string);
 }
 
 export async function getVenues(): Promise<Venue[]> {
@@ -248,24 +285,41 @@ export async function getDailyAverages(venueIds: number[]): Promise<DailyBar[]> 
  * (a `HAVING` on `minuteOfDay`). This crops the chart to opening hours even
  * though older baseline days predate the "collect only while open" change and so
  * still carry overnight readings. Pass `null` to keep every bucket.
+ *
+ * `anchorDate` re-points the primary line at a chosen recent Madrid date instead
+ * of today (the chart's day selector), with the baseline taken from that date's
+ * own same-weekday history. A past day is complete, so its line runs to close;
+ * today's still stops at `now`.
  */
 export async function getTodayVsTypical(
   venueId: number,
   now = new Date(),
   weeks = TYPICAL_WEEKS,
-  openWindow: { openMin: number; closeMin: number } | null = null
+  openWindow: { openMin: number; closeMin: number } | null = null,
+  anchorDate?: string
 ): Promise<TodayVsTypicalPoint[]> {
-  const offsetMod = madridOffsetModifier(now);
-  const today = madridDateString(now);
-  const baselineDates = sameWeekdayDates(now, weeks);
-  const dates = [today, ...baselineDates];
+  const todayStr = madridDateString(now);
+  // The day plotted as the primary ("today") line: today by default, or the
+  // selected recent date. The "typical" baseline is that day's same-weekday avg.
+  const primary = anchorDate ?? todayStr;
+  const isToday = primary === todayStr;
+  // Convert with the offset for the *plotted* day, so a past date sitting in a
+  // different DST period still aligns (the 30-day window rarely crosses one).
+  const offsetMod = madridOffsetModifier(isToday ? now : new Date(`${primary}T12:00:00Z`));
+  const baselineDates = sameWeekdayDatesFromDateString(primary, weeks);
+  const dates = [primary, ...baselineDates];
   const placeholders = dates.map(() => "?").join(", ");
 
   // Bound the scan to the window the IN filter cares about (oldest baseline date
   // minus a day of slack for the timezone shift), so SQLite can prune by timestamp.
-  const oldest = baselineDates[baselineDates.length - 1] ?? today;
+  const oldest = baselineDates[baselineDates.length - 1] ?? primary;
   const from = new Date(Date.parse(`${oldest}T00:00:00Z`) - 86_400_000).toISOString();
-  const to = now.toISOString();
+  // Today's live line stops at `now`; a completed past day runs to its end (a
+  // 2-day pad past its UTC midnight comfortably covers local close — the IN
+  // filter is what actually scopes the rows to `primary`).
+  const to = (
+    isToday ? now : new Date(Date.parse(`${primary}T00:00:00Z`) + 2 * 86_400_000)
+  ).toISOString();
 
   // Crop to open hours: keep minutes from openMin up to (but not including) closeMin.
   const having = openWindow ? "HAVING minuteOfDay >= ? AND minuteOfDay < ?" : "";
@@ -291,10 +345,10 @@ export async function getTodayVsTypical(
     `,
     args: [
       offsetMod, offsetMod,
-      offsetMod, today,
-      offsetMod, today,
-      offsetMod, today,
-      offsetMod, today,
+      offsetMod, primary,
+      offsetMod, primary,
+      offsetMod, primary,
+      offsetMod, primary,
       venueId,
       from, to,
       offsetMod, ...dates,

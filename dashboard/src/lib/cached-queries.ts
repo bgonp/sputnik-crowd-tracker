@@ -6,6 +6,7 @@ import {
   getTodayVisitorCounts,
   getHeatmap,
   getTodayVsTypical,
+  getDatesWithData,
 } from "./queries";
 
 export const getCachedVenues = unstable_cache(getVenues, ["venues"], {
@@ -33,16 +34,33 @@ export const getCachedHeatmap = unstable_cache(getHeatmap, ["heatmap"], {
   revalidate: 300,
 });
 
-// Carries today's live line, so it tracks the 60s refresh cadence. The nowIso
-// (rounded to the minute by the caller) and the open window are part of the
-// cache key. openMin/closeMin are null when the venue has no configured hours.
+// The picker's selectable days change at most once a day, so the caller keys on
+// a day-stable ISO (`<today>T12:00:00Z`) and we cache for an hour like venues.
+export const getCachedDatesWithData = unstable_cache(
+  (venueId: number, dayIso: string) => getDatesWithData(venueId, new Date(dayIso)),
+  ["dates-with-data"],
+  { revalidate: 3600 }
+);
+
+// Carries the live line, so it tracks the 60s refresh cadence. The nowIso, the
+// open window, and the selected anchorDate are all part of the cache key.
+// openMin/closeMin are null when the venue has no configured hours; anchorDate
+// is null for today (the default) and a `YYYY-MM-DD` string for a past day —
+// the caller then passes a day-stable nowIso so a static past day caches once.
 export const getCachedTodayVsTypical = unstable_cache(
-  (venueId: number, nowIso: string, openMin: number | null, closeMin: number | null) =>
+  (
+    venueId: number,
+    nowIso: string,
+    openMin: number | null,
+    closeMin: number | null,
+    anchorDate: string | null
+  ) =>
     getTodayVsTypical(
       venueId,
       new Date(nowIso),
       undefined,
-      openMin !== null && closeMin !== null ? { openMin, closeMin } : null
+      openMin !== null && closeMin !== null ? { openMin, closeMin } : null,
+      anchorDate ?? undefined
     ),
   ["today-vs-typical"],
   { revalidate: 60 }

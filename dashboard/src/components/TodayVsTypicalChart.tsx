@@ -1,6 +1,6 @@
 "use client";
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ReferenceDot, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartLegend,
@@ -13,12 +13,23 @@ import { buildTodayVsTypicalSeries, type TodayVsTypicalDatum } from "@/lib/today
 
 interface Props {
   data: TodayVsTypicalPoint[];
-  todayLabel: string;
+  // Legend label for the primary line: "Hoy" for today, or a date for a past day.
+  dayLabel: string;
   typicalLabel: string;
+  // When plotting today, the live line stops at "now"; mark its tip with a dot
+  // to call out the current occupancy. A past day is complete, so no dot.
+  isToday: boolean;
 }
 
-export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
+export function TodayVsTypicalChart({ data, dayLabel, typicalLabel, isToday }: Props) {
   const chartData = buildTodayVsTypicalSeries(data);
+
+  // The last point today's line reached = the current occupancy. (reduce, not
+  // findLast, for older runtime targets.)
+  const liveIndex = isToday
+    ? chartData.reduce((last, d, i) => (d.todayPct != null ? i : last), -1)
+    : -1;
+  const livePoint = liveIndex >= 0 ? chartData[liveIndex] : null;
 
   // The x-axis is now per-minute (hundreds of points), so label only whole
   // hours — and every other hour when the open window is long — to keep it legible.
@@ -26,9 +37,12 @@ export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
   const tickStep = hourTicks.length > 8 ? 2 : 1;
   const ticks = hourTicks.filter((_, i) => i % tickStep === 0);
 
+  // Keyed by each line's `dataKey` so both the tooltip (resolves by name) and the
+  // legend (resolves by dataKey) find their label/colour — keying by a separate
+  // series name leaves the legend label blank.
   const config = {
-    today: { label: todayLabel, color: "var(--chart-1)" },
-    typical: { label: typicalLabel, color: "var(--muted-foreground)" },
+    todayPct: { label: dayLabel, color: "var(--chart-1)" },
+    typicalPct: { label: typicalLabel, color: "var(--muted-foreground)" },
   };
 
   return (
@@ -42,10 +56,10 @@ export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
             <ChartTooltipContent
               formatter={(_value, name, item) => {
                 const d = item.payload as TodayVsTypicalDatum;
-                const isToday = name === "today";
+                const isToday = name === "todayPct";
                 const pct = isToday ? d.todayPct : d.typicalPct;
                 const abs = isToday ? d.todayAbs : d.typicalAbs;
-                const label = isToday ? todayLabel : typicalLabel;
+                const label = isToday ? dayLabel : typicalLabel;
                 // `today` is null in buckets the day hasn't reached yet; show a
                 // placeholder rather than an empty row (which reads as a glitch).
                 return (
@@ -65,9 +79,9 @@ export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
             left unconnected so a missing baseline bucket isn't drawn as a value. */}
         <Line
           dataKey="typicalPct"
-          name="typical"
+          name="typicalPct"
           type="monotone"
-          stroke="var(--color-typical)"
+          stroke="var(--color-typicalPct)"
           strokeWidth={1.5}
           strokeDasharray="4 3"
           dot={false}
@@ -77,14 +91,25 @@ export function TodayVsTypicalChart({ data, todayLabel, typicalLabel }: Props) {
         />
         <Line
           dataKey="todayPct"
-          name="today"
+          name="todayPct"
           type="monotone"
-          stroke="var(--color-today)"
+          stroke="var(--color-todayPct)"
           strokeWidth={2}
           dot={false}
           connectNulls={false}
           isAnimationActive={false}
         />
+        {livePoint && (
+          <ReferenceDot
+            x={livePoint.time}
+            y={livePoint.todayPct ?? 0}
+            r={4}
+            fill="var(--color-todayPct)"
+            stroke="var(--background)"
+            strokeWidth={2}
+            ifOverflow="visible"
+          />
+        )}
       </LineChart>
     </ChartContainer>
   );

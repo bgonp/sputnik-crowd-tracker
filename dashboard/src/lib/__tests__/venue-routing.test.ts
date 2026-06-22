@@ -3,6 +3,7 @@ import {
   isAbsoluteUnit,
   forwardedQuery,
   parseLegacyVenueId,
+  dateChangeHref,
 } from "../venue-routing";
 
 describe("isAbsoluteUnit", () => {
@@ -72,5 +73,44 @@ describe("parseLegacyVenueId", () => {
   it("takes the first value when the param is repeated", () => {
     expect(parseLegacyVenueId(["2", "3"])).toBe(2);
     expect(parseLegacyVenueId(["abc", "2"])).toBeNull();
+  });
+});
+
+describe("dateChangeHref", () => {
+  const today = "2026-06-20";
+
+  it("drops the date param when the default (today) is chosen", () => {
+    expect(dateChangeHref("/las-rozas", new URLSearchParams(), today, today)).toBe(
+      "/las-rozas"
+    );
+  });
+
+  it("sets ?date for a non-default day", () => {
+    expect(
+      dateChangeHref("/las-rozas", new URLSearchParams(), "2026-06-18", today)
+    ).toBe("/las-rozas?date=2026-06-18");
+  });
+
+  it("preserves other params when setting the date", () => {
+    expect(
+      dateChangeHref("/las-rozas", new URLSearchParams("utm_source=x"), "2026-06-18", today)
+    ).toBe("/las-rozas?utm_source=x&date=2026-06-18");
+  });
+
+  it("removes only the date param when returning to today", () => {
+    expect(
+      dateChangeHref(
+        "/las-rozas",
+        new URLSearchParams("date=2026-06-18&utm_source=x"),
+        today,
+        today
+      )
+    ).toBe("/las-rozas?utm_source=x");
+  });
+
+  it("does not mutate the passed-in params", () => {
+    const params = new URLSearchParams("date=2026-06-18");
+    dateChangeHref("/las-rozas", params, today, today);
+    expect(params.get("date")).toBe("2026-06-18");
   });
 });
