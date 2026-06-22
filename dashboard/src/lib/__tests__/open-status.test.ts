@@ -6,6 +6,7 @@ import {
   isHeatmapCellOpen,
   openStatusFor,
   openWindowFor,
+  anyVenueOpenAt,
   type MadridMoment,
 } from "../open-status";
 
@@ -101,5 +102,33 @@ describe("isHeatmapCellOpen", () => {
   it("treats a day with no configured hours as fully open (fail-safe)", () => {
     expect(isHeatmapCellOpen(hours, 99, 0, 3)).toBe(true);
     expect(isHeatmapCellOpen([], 1, 0, 23)).toBe(true);
+  });
+});
+
+describe("anyVenueOpenAt", () => {
+  // Venue 2 mirrors venue 1's weekday schedule (07:00–23:00) so we can test
+  // "some open, some closed" across venues.
+  const multi: VenueHours[] = [
+    ...hours,
+    ...[1, 2, 3, 4, 5].map((dow) => ({ venueId: 2, dow, openMin: 7 * 60, closeMin: 23 * 60 })),
+  ];
+
+  it("is true when at least one venue is open", () => {
+    expect(anyVenueOpenAt(multi, [1, 2], at(3, 12))).toBe(true);
+  });
+
+  it("is false when every venue is closed", () => {
+    // Wednesday 03:00 — both venues closed.
+    expect(anyVenueOpenAt(multi, [1, 2], at(3, 3))).toBe(false);
+  });
+
+  it("is true if any single venue is open while others are closed", () => {
+    // Sunday 21:30: venue 1 closes at 21:00 (closed), but a venue with no rows
+    // counts as open via the fail-safe.
+    expect(anyVenueOpenAt(multi, [1, 99], at(0, 21, 30))).toBe(true);
+  });
+
+  it("is false for an empty venue list", () => {
+    expect(anyVenueOpenAt(multi, [], at(3, 12))).toBe(false);
   });
 });

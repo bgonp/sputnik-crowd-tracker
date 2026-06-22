@@ -78,6 +78,19 @@ export function isHeatmapCellOpen(
   return window.openMin < (hour + 1) * 60 && window.closeMin > hour * 60;
 }
 
+/**
+ * Whether any of the given venues is open at `moment`. Used to decide whether
+ * live data is expected to be flowing right now (a venue with no configured
+ * hours counts as open, matching `openStatusFor`'s fail-safe).
+ */
+export function anyVenueOpenAt(
+  hours: VenueHours[],
+  venueIds: number[],
+  moment: MadridMoment
+): boolean {
+  return venueIds.some((id) => openStatusFor(hours, id, moment).open);
+}
+
 export interface OpenStatus {
   open: boolean;
   /** "HH:MM" of the venue's next opening, when currently closed and one is known. */

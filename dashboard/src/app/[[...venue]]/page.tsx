@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { CalendarDays, LineChart } from "lucide-react";
+import { CalendarDays, LineChart, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveCards } from "@/components/LiveCards";
 import { ChartSkeleton } from "@/components/ChartSkeleton";
@@ -17,7 +17,7 @@ import {
   getCachedTodayVisitorCounts,
   getCachedDatesWithData,
 } from "@/lib/cached-queries";
-import { madridMoment, openWindowFor } from "@/lib/open-status";
+import { madridMoment, openWindowFor, anyVenueOpenAt } from "@/lib/open-status";
 import {
   SELECTABLE_DAYS,
   madridDateString,
@@ -26,7 +26,18 @@ import {
   recentMadridDates,
   resolveSelectedDate,
 } from "@/lib/today-vs-typical";
-import { TODAY_LABEL, lastWeekdaysLabel, dateLineLabel } from "@/lib/labels";
+import {
+  TODAY_LABEL,
+  lastWeekdaysLabel,
+  dateLineLabel,
+  lastUpdatedLabel,
+} from "@/lib/labels";
+import {
+  latestReadingTimestamp,
+  formatMadridTime,
+  isLastUpdatedStale,
+  STALE_AFTER_MINUTES,
+} from "@/lib/last-updated";
 import { DaySelector } from "@/components/DaySelector";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
@@ -138,6 +149,23 @@ export default async function Home({ params, searchParams }: Props) {
   // are closed right now (their newest reading is from closing time).
   const nowMoment = madridMoment(now);
 
+  // Freshest reading across venues = the last successful scrape cycle. Surfaced
+  // as a single "Actualizado a las HH:MM" stamp; re-renders with the 60s refresh.
+  const lastUpdated = latestReadingTimestamp(liveReadings);
+  // Flag the stamp as stale only when data is *expected* to be flowing — i.e.
+  // some venue was open within the staleness window. The look-back grace mirrors
+  // the collector's monitor: it avoids false alarms overnight and just after
+  // opening (before the first reading of the day lands).
+  const graceMoment = madridMoment(
+    new Date(now.getTime() - STALE_AFTER_MINUTES * 60_000)
+  );
+  const expectFresh = anyVenueOpenAt(
+    venueHours,
+    liveReadings.map((r) => r.venueId),
+    graceMoment
+  );
+  const lastUpdatedStale = isLastUpdatedStale(lastUpdated, now, expectFresh);
+
   // Per-venue chart inputs (only consumed when a venue is selected).
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
   // Baseline legend label for the plotted day's weekday, e.g. "Últimos sábados".
@@ -167,9 +195,25 @@ export default async function Home({ params, searchParams }: Props) {
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Aforo en tiempo real — todos los centros
-        </h2>
+        <div className="flex items-baseline justify-between gap-3 mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Aforo en tiempo real — todos los centros
+          </h2>
+          {lastUpdated && (
+            <p
+              className={`flex items-center gap-1.5 text-xs whitespace-nowrap ${
+                lastUpdatedStale
+                  ? "font-medium text-amber-600 dark:text-amber-500"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {lastUpdatedStale && (
+                <AlertTriangle aria-hidden className="size-3.5" />
+              )}
+              {lastUpdatedLabel(formatMadridTime(lastUpdated))}
+            </p>
+          )}
+        </div>
         <Suspense>
           <LiveCards
             readings={liveReadings}
