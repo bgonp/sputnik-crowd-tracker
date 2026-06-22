@@ -184,19 +184,23 @@ export default async function Home({ params, searchParams }: Props) {
       <div className="grid gap-8 xl:grid-cols-2 items-start">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              Mapa de calor{selectedVenueName && ` — ${selectedVenueName}`}
-            </CardTitle>
+            {/* min-h-7 mirrors the line chart's header, whose day-selector
+                button sets that height — keeps both card titles the same height. */}
+            <div className="flex min-h-7 items-center">
+              <CardTitle className="text-base">
+                Mapa de calor{selectedVenueName && ` — ${selectedVenueName}`}
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             {selectedVenue ? (
-              <Suspense fallback={<ChartSkeleton className="h-48" />}>
+              <Suspense fallback={<ChartSkeleton className="h-64" />}>
                 <HeatmapSection venueId={selectedVenue.id} />
               </Suspense>
             ) : (
               <ChartPlaceholder
                 variant="grid"
-                className="h-48"
+                className="h-64"
                 icon={<CalendarDays className="h-6 w-6" />}
                 label="Selecciona un rocódromo para ver su mapa de calor"
               />
@@ -206,7 +210,7 @@ export default async function Home({ params, searchParams }: Props) {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex min-h-7 items-center justify-between gap-3">
               <CardTitle className="text-base">
                 {dayLabel} vs. media{selectedVenueName && ` — ${selectedVenueName}`}
               </CardTitle>
