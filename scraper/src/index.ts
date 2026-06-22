@@ -1,6 +1,7 @@
 import { createDbClient } from "./db.js";
-import { toReadings, type Reading } from "./transform.js";
-import { madridMoment, anyVenueOpenAt, isVenueOpenAt } from "./open-hours.js";
+import { type Reading } from "./transform.js";
+import { madridMoment, anyVenueOpenAt } from "./open-hours.js";
+import { planIngest } from "./ingest-plan.js";
 
 const GYM_URL = "https://sputnikclimbing.deporsite.net/aforo-guindalera";
 const OCCUPANCY_API_URL =
@@ -122,15 +123,24 @@ async function run(): Promise<void> {
   const { csrf, cookie } = await fetchCsrfToken();
   const venues = await fetchOccupancy(csrf, cookie);
 
-  // Some venues open later / close earlier than others, so drop readings for
-  // venues that are individually closed right now even when others are open.
-  const readings = toReadings(venues, timestamp).filter((r) => isVenueOpenAt(r.venueName, moment));
-  if (readings.length === 0) {
-    console.log(`No venues open at Madrid ${formatMinute(moment.minuteOfDay)} — nothing to insert.`);
-    return;
+  const plan = planIngest(venues, timestamp, moment);
+  switch (plan.kind) {
+    case "empty-payload":
+      // A 200 with an empty payload is a transient API blip, not a closed gym —
+      // we already passed the open-hours gate above. Warn so it's distinguishable.
+      console.warn(
+        `Occupancy API returned no venues at Madrid ${formatMinute(moment.minuteOfDay)} — likely a transient API blip, nothing to insert.`
+      );
+      return;
+    case "no-open-venues":
+      console.log(
+        `No open venues to insert at Madrid ${formatMinute(moment.minuteOfDay)} (API returned ${plan.fetched}).`
+      );
+      return;
+    case "insert":
+      await insertReadings(plan.readings);
+      return;
   }
-
-  await insertReadings(readings);
 }
 
 run().catch((err) => {
