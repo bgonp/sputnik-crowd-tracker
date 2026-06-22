@@ -1,7 +1,8 @@
 "use client";
 
 import { DAY_LABELS, HOUR_LABELS, OPENING_HOUR } from "@/lib/labels";
-import type { HeatmapCell } from "@/lib/queries";
+import { isHeatmapCellOpen } from "@/lib/open-status";
+import type { HeatmapCell, VenueHours } from "@/lib/queries";
 
 function cellStyle(pct: number): React.CSSProperties {
   if (pct === 0) return {};
@@ -9,7 +10,15 @@ function cellStyle(pct: number): React.CSSProperties {
   return { backgroundColor: `hsl(${hue.toFixed(1)} 70% 60%)` };
 }
 
-export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
+export function HeatmapChart({
+  data,
+  venueId,
+  hours,
+}: {
+  data: HeatmapCell[];
+  venueId: number;
+  hours: VenueHours[];
+}) {
   const lookup = new Map(data.map((d) => [`${d.day}-${d.hour}`, d.avgPercentage]));
 
   return (
@@ -28,6 +37,11 @@ export function HeatmapChart({ data }: { data: HeatmapCell[] }) {
             <div className="w-8 text-[11px] text-muted-foreground text-right pr-1">{day}</div>
             {HOUR_LABELS.slice(OPENING_HOUR).map((_, i) => {
               const h = i + OPENING_HOUR;
+              // Outside the venue's open window: render a blank spacer (no muted
+              // "no data" box) so the grid shows only the hours it was open.
+              if (!isHeatmapCellOpen(hours, venueId, d, h)) {
+                return <div key={h} className="w-8 h-6 m-px" />;
+              }
               const pct = lookup.get(`${d}-${h}`) ?? 0;
               return (
                 <div

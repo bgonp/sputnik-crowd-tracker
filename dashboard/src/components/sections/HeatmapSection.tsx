@@ -1,7 +1,10 @@
-import { getCachedHeatmap } from "@/lib/cached-queries";
+import { getCachedHeatmap, getCachedVenueHours } from "@/lib/cached-queries";
 import { HeatmapChart } from "@/components/HeatmapChart";
 
 export async function HeatmapSection({ venueId }: { venueId: number }) {
-  const data = await getCachedHeatmap([venueId]);
-  return <HeatmapChart data={data} />;
+  const [data, hours] = await Promise.all([
+    getCachedHeatmap([venueId]),
+    getCachedVenueHours(),
+  ]);
+  return <HeatmapChart data={data} venueId={venueId} hours={hours} />;
 }
