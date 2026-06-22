@@ -12,6 +12,8 @@ import {
   formatMinuteOfDay,
   movingAverage,
   buildTodayVsTypicalSeries,
+  fillTodayGaps,
+  MAX_GAP_FILL_MINUTES,
 } from "../today-vs-typical";
 
 describe("madridDateString", () => {
@@ -226,5 +228,102 @@ describe("movingAverage", () => {
   it("skips nulls, and yields null only when the whole window is empty", () => {
     expect(movingAverage([null, 4, 6], 1)).toEqual([4, 5, 5]);
     expect(movingAverage([null, null], 1)).toEqual([null, null]);
+  });
+});
+
+describe("fillTodayGaps", () => {
+  // Build a point with today occ/pct (null for a hole) and a constant baseline.
+  const pt = (
+    minuteOfDay: number,
+    occ: number | null,
+    pct: number | null
+  ): TodayVsTypicalPoint => ({
+    minuteOfDay,
+    todayOccupancy: occ,
+    todayPercentage: pct,
+    typicalOccupancy: 20,
+    typicalPercentage: 25,
+  });
+
+  it("bridges a short interior gap by linear interpolation (both % and people)", () => {
+    const filled = fillTodayGaps([
+      pt(600, 40, 50),
+      pt(601, null, null),
+      pt(602, 50, 70),
+    ]);
+    // f = 0.5 at minute 601 → occ (40→50)=45, pct (50→70)=60.
+    expect(filled[1]).toMatchObject({ todayOccupancy: 45, todayPercentage: 60 });
+  });
+
+  it("interpolates each null in a multi-minute hole by its distance", () => {
+    const filled = fillTodayGaps([
+      pt(600, 40, 100),
+      pt(601, null, null),
+      pt(602, null, null),
+      pt(603, null, null),
+      pt(604, 40, 140),
+    ]);
+    // occ is flat (40) so stays 40; pct climbs 100→140 over 4 min: 110/120/130.
+    expect(filled.map((p) => p.todayPercentage)).toEqual([100, 110, 120, 130, 140]);
+    expect(filled.map((p) => p.todayOccupancy)).toEqual([40, 40, 40, 40, 40]);
+  });
+
+  it("leaves trailing nulls (the future) untouched so the live line still stops at now", () => {
+    const filled = fillTodayGaps([pt(600, 40, 50), pt(601, null, null), pt(602, null, null)]);
+    expect(filled[1]!.todayPercentage).toBeNull();
+    expect(filled[2]!.todayPercentage).toBeNull();
+  });
+
+  it("leaves leading nulls (before the first reading) untouched", () => {
+    const filled = fillTodayGaps([pt(600, null, null), pt(601, 40, 50)]);
+    expect(filled[0]!.todayPercentage).toBeNull();
+  });
+
+  it("does not bridge a gap longer than the threshold", () => {
+    const filled = fillTodayGaps(
+      [pt(600, 40, 50), pt(601, null, null), pt(602, 50, 70)],
+      // Threshold below the 2-minute span: leave it broken.
+      1
+    );
+    expect(filled[1]!.todayPercentage).toBeNull();
+  });
+
+  it("bridges a gap exactly at the threshold span", () => {
+    const filled = fillTodayGaps(
+      [pt(600, 40, 50), pt(600 + MAX_GAP_FILL_MINUTES - 1, null, null), pt(600 + MAX_GAP_FILL_MINUTES, 40, 50)],
+      MAX_GAP_FILL_MINUTES
+    );
+    expect(filled[1]!.todayPercentage).toBe(50);
+  });
+
+  it("does not mutate the input or touch the baseline", () => {
+    const input = [pt(600, 40, 50), pt(601, null, null), pt(602, 50, 70)];
+    const filled = fillTodayGaps(input);
+    expect(input[1]!.todayPercentage).toBeNull(); // original untouched
+    expect(filled.every((p) => p.typicalPercentage === 25)).toBe(true); // baseline intact
+  });
+});
+
+describe("buildTodayVsTypicalSeries — gap bridging", () => {
+  const pt = (
+    minuteOfDay: number,
+    occ: number | null,
+    pct: number | null
+  ): TodayVsTypicalPoint => ({
+    minuteOfDay,
+    todayOccupancy: occ,
+    todayPercentage: pct,
+    typicalOccupancy: 20,
+    typicalPercentage: 25,
+  });
+
+  it("fills a short interior scrape gap so the series has no break", () => {
+    const series = buildTodayVsTypicalSeries([pt(600, 40, 50), pt(601, null, null), pt(602, 50, 70)]);
+    expect(series.map((d) => d.todayPct)).toEqual([50, 60, 70]);
+  });
+
+  it("still preserves trailing nulls so the live line breaks at 'now'", () => {
+    const series = buildTodayVsTypicalSeries([pt(600, 40, 50), pt(601, null, null)]);
+    expect(series[1]!.todayPct).toBeNull();
   });
 });

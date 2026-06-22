@@ -131,6 +131,63 @@ export interface TodayVsTypicalDatum {
 export const BASELINE_SMOOTH_RADIUS = 3; // ±3 min → 7-minute window
 
 /**
+ * Longest today-line gap (minutes between the readings either side of it) we
+ * bridge by interpolation. A few missed scrape cycles leave short holes that
+ * read as ugly breaks in an otherwise live line, so we fill them; anything
+ * longer is treated as a genuine outage and left broken rather than drawn as a
+ * straight line implying data we never collected. Mirrors the collector's
+ * 15-min staleness threshold.
+ */
+export const MAX_GAP_FILL_MINUTES = 15;
+
+/**
+ * Fill short *interior* holes in today's line so a couple of missed scrape
+ * cycles don't break an otherwise continuous live line. A hole is a run of
+ * `null` today values bounded by a real reading on each side; it's bridged by
+ * linear interpolation (by minute, on both the % and the people count) only
+ * when the two bounding readings are within {@link MAX_GAP_FILL_MINUTES}.
+ *
+ * Leading nulls (before the day's first reading) and trailing nulls (after the
+ * last — i.e. the future, where the live line must still stop) have no reading
+ * on one side, so they're never filled. The baseline ("typical") line is left
+ * untouched — only today's line is patched. Returns a new array; inputs aren't
+ * mutated.
+ */
+export function fillTodayGaps(
+  points: TodayVsTypicalPoint[],
+  maxGapMinutes = MAX_GAP_FILL_MINUTES
+): TodayVsTypicalPoint[] {
+  const out = points.map((p) => ({ ...p }));
+  let prev = -1; // index of the previous point with a real today reading
+  for (let i = 0; i < out.length; i++) {
+    if (out[i]!.todayPercentage === null) continue;
+    // Found a real reading: bridge the run of nulls since the last one, if any
+    // and if it's short enough.
+    if (prev >= 0 && i - prev > 1) {
+      const a = out[prev]!;
+      const b = out[i]!;
+      const span = b.minuteOfDay - a.minuteOfDay;
+      if (span > 0 && span <= maxGapMinutes) {
+        for (let k = prev + 1; k < i; k++) {
+          const f = (out[k]!.minuteOfDay - a.minuteOfDay) / span;
+          out[k]!.todayPercentage = interpolate(a.todayPercentage, b.todayPercentage, f);
+          out[k]!.todayOccupancy = interpolate(a.todayOccupancy, b.todayOccupancy, f);
+        }
+      }
+    }
+    prev = i;
+  }
+  return out;
+}
+
+/** Linear interpolation between two (possibly null) endpoints, rounded to match
+ *  the query's `ROUND(...)`. Null if either endpoint is missing. */
+function interpolate(a: number | null, b: number | null, fraction: number): number | null {
+  if (a === null || b === null) return null;
+  return Math.round(a + (b - a) * fraction);
+}
+
+/**
  * Centred moving average over a per-minute series: each point becomes the mean
  * of itself and up to `radius` neighbours on each side. Nulls are skipped, and a
  * window with no values stays null. Assumes consecutive minutes (the chart's
@@ -163,15 +220,18 @@ export function movingAverage(
 export function buildTodayVsTypicalSeries(
   points: TodayVsTypicalPoint[]
 ): TodayVsTypicalDatum[] {
+  // Bridge short holes in today's line first (missed scrape cycles) so it reads
+  // as continuous; the baseline is smoothed separately below.
+  const filled = fillTodayGaps(points);
   const typicalPct = movingAverage(
-    points.map((p) => p.typicalPercentage),
+    filled.map((p) => p.typicalPercentage),
     BASELINE_SMOOTH_RADIUS
   );
   const typicalAbs = movingAverage(
-    points.map((p) => p.typicalOccupancy),
+    filled.map((p) => p.typicalOccupancy),
     BASELINE_SMOOTH_RADIUS
   );
-  return points.map((p, i) => ({
+  return filled.map((p, i) => ({
     time: formatMinuteOfDay(p.minuteOfDay),
     todayPct: p.todayPercentage,
     todayAbs: p.todayOccupancy,

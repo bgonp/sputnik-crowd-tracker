@@ -118,6 +118,9 @@ export function TodayVsTypicalChart({ data, dayLabel, typicalLabel, isToday }: P
           opacity={0.6}
           isAnimationActive={false}
         />
+        {/* Short scrape gaps are bridged upstream in buildTodayVsTypicalSeries, so
+            the live line reads continuous; long outages and the future stay null
+            and break here (connectNulls stays false so they aren't drawn straight). */}
         <Line
           dataKey="todayPct"
           name="todayPct"
