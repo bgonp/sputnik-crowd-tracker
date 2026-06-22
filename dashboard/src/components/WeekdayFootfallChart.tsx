@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -11,6 +11,7 @@ import { occupancyColor } from "@/lib/occupancy-color";
 import {
   buildWeekdayFootfallSeries,
   weekdayActivityScale,
+  overallDailyAverage,
   type WeekdayFootfallDatum,
 } from "@/lib/weekday-footfall";
 
@@ -19,6 +20,9 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
   // Quietest day → green, busiest → red, on the same scale as the heatmap, so
   // the best and worst days to visit pop out. null (no data / all tied) = muted.
   const scale = weekdayActivityScale(series);
+  // Overall daily average (across all days, ignoring weekday) → reference line,
+  // so each bar reads as above/below a typical day. null when there's no data.
+  const overallAverage = overallDailyAverage(data);
   const barColor = (i: number): string => {
     const t = scale[i];
     return t == null ? "var(--muted-foreground)" : occupancyColor(t * 100);
@@ -60,6 +64,19 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
               <Cell key={d.day} fill={barColor(i)} />
             ))}
           </Bar>
+          {overallAverage != null && (
+            <ReferenceLine
+              y={overallAverage}
+              stroke="var(--foreground)"
+              strokeDasharray="4 3"
+              label={{
+                value: `media ${overallAverage}`,
+                position: "insideTopRight",
+                fontSize: 11,
+                fill: "var(--muted-foreground)",
+              }}
+            />
+          )}
         </BarChart>
       </ChartContainer>
       {/* Green→red activity legend, mirroring the heatmap's. */}

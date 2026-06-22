@@ -20,8 +20,8 @@ vi.mock("@/components/WeekdayFootfallChart", () => ({
 import { WeekdayFootfallSection } from "../WeekdayFootfallSection";
 
 const DATA: WeekdayFootfall[] = [
-  { day: 0, avgVisitors: 120 },
-  { day: 5, avgVisitors: 300 },
+  { day: 0, avgVisitors: 120, sampleDays: 8 },
+  { day: 5, avgVisitors: 300, sampleDays: 8 },
 ];
 
 beforeEach(() => {

@@ -104,32 +104,33 @@ describe("getHourlyAverages", () => {
 // --- getWeekdayFootfall ---
 
 describe("getWeekdayFootfall", () => {
-  it("maps the raw weekday to Monday-indexed and returns avgVisitors", async () => {
+  it("maps the raw weekday to Monday-indexed and returns avgVisitors + sampleDays", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(
       fakeResult([
-        { dayRaw: 1, avgVisitors: 120 }, // Monday
-        { dayRaw: 0, avgVisitors: 300 }, // Sunday
-        { dayRaw: 6, avgVisitors: 280 }, // Saturday
+        { dayRaw: 1, avgVisitors: 120, sampleDays: 8 }, // Monday
+        { dayRaw: 0, avgVisitors: 300, sampleDays: 7 }, // Sunday
+        { dayRaw: 6, avgVisitors: 280, sampleDays: 8 }, // Saturday
       ])
     );
     const rows = await getWeekdayFootfall(7, new Date("2026-06-22T12:00:00Z"));
     expect(rows).toEqual([
-      { day: 0, avgVisitors: 120 }, // Mon
-      { day: 6, avgVisitors: 300 }, // Sun
-      { day: 5, avgVisitors: 280 }, // Sat
+      { day: 0, avgVisitors: 120, sampleDays: 8 }, // Mon
+      { day: 6, avgVisitors: 300, sampleDays: 7 }, // Sun
+      { day: 5, avgVisitors: 280, sampleDays: 8 }, // Sat
     ]);
   });
 
-  it("averages per-day MAX(entries) by weekday, venue-bound and window-ranged", async () => {
+  it("averages per-day MAX(entries) by weekday and counts the sample days, venue-bound and window-ranged", async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(fakeResult([]));
     await getWeekdayFootfall(7, new Date("2026-06-22T12:00:00Z"), 8);
     const { sql, args } = vi.mocked(db.execute).mock.calls[0]?.[0] as unknown as {
       sql: string;
       args: unknown[];
     };
-    // Inner query totals each day, outer averages those by weekday.
+    // Inner query totals each day, outer averages those by weekday and counts them.
     expect(sql).toMatch(/MAX\(entries\) AS dailyTotal/i);
     expect(sql).toMatch(/AVG\(dailyTotal\)/i);
+    expect(sql).toMatch(/COUNT\(\*\) AS sampleDays/i);
     expect(sql).toMatch(/GROUP BY dayRaw/i);
     expect(sql).toMatch(/timestamp >= \?/i);
     expect(args).toContain(7); // venue id bound, not interpolated

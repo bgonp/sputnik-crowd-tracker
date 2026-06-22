@@ -32,6 +32,20 @@ export function buildWeekdayFootfallSeries(
 }
 
 /**
+ * Overall mean daily footfall across the window, ignoring the day of week — the
+ * chart's reference line, so a bar reads as above/below a typical day here.
+ * Count-weighted (each weekday's mean × its sample days, over the total days) so
+ * it's the true average of all days, not the average of the seven weekday means.
+ * Returns null when there's no data.
+ */
+export function overallDailyAverage(data: WeekdayFootfall[]): number | null {
+  const totalDays = data.reduce((sum, d) => sum + d.sampleDays, 0);
+  if (totalDays === 0) return null;
+  const totalVisitors = data.reduce((sum, d) => sum + d.avgVisitors * d.sampleDays, 0);
+  return Math.round(totalVisitors / totalDays);
+}
+
+/**
  * Relative activity position of each bar on a 0→1 scale (quietest = 0, busiest =
  * 1), so the chart can colour them on the green→red occupancy scale and the
  * best/worst day to visit pops out. Days with no data — and every day when they

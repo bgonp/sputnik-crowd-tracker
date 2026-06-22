@@ -75,6 +75,7 @@ export interface DailyVisitorCount {
 export interface WeekdayFootfall {
   day: number; // Monday-indexed: 0 = Monday … 6 = Sunday
   avgVisitors: number; // mean daily footfall for that weekday over the window
+  sampleDays: number; // days that fed the average — lets callers weight the overall mean
 }
 
 /** True for a "no such table" error — the only case the venue queries tolerate
@@ -206,7 +207,7 @@ export async function getWeekdayFootfall(
   const from = new Date(now.getTime() - weeks * 7 * 86_400_000).toISOString();
   const result = await db.execute({
     sql: `
-      SELECT dayRaw, ROUND(AVG(dailyTotal)) AS avgVisitors
+      SELECT dayRaw, ROUND(AVG(dailyTotal)) AS avgVisitors, COUNT(*) AS sampleDays
       FROM (
         SELECT
           CAST(strftime('%w', datetime(timestamp, ?)) AS INTEGER) AS dayRaw,
@@ -222,10 +223,13 @@ export async function getWeekdayFootfall(
     `,
     args: [offsetMod, offsetMod, venueId, from],
   });
-  return toPlain<{ dayRaw: number; avgVisitors: number }>(result.rows).map((r) => ({
-    day: r.dayRaw === 0 ? 6 : r.dayRaw - 1,
-    avgVisitors: r.avgVisitors,
-  }));
+  return toPlain<{ dayRaw: number; avgVisitors: number; sampleDays: number }>(result.rows).map(
+    (r) => ({
+      day: r.dayRaw === 0 ? 6 : r.dayRaw - 1,
+      avgVisitors: r.avgVisitors,
+      sampleDays: r.sampleDays,
+    })
+  );
 }
 
 export async function getHeatmap(venueIds: number[]): Promise<HeatmapCell[]> {
