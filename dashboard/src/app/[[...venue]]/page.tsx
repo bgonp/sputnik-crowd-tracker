@@ -26,7 +26,8 @@ import {
   recentMadridDates,
   resolveSelectedDate,
 } from "@/lib/today-vs-typical";
-import { TODAY_LABEL, lastWeekdaysLabel, dateLineLabel } from "@/lib/labels";
+import { TODAY_LABEL, lastWeekdaysLabel, dateLineLabel, lastUpdatedLabel } from "@/lib/labels";
+import { latestReadingTimestamp, formatMadridTime } from "@/lib/last-updated";
 import { DaySelector } from "@/components/DaySelector";
 import { shortVenueName, venueSlug, findVenueBySlug } from "@/lib/venues";
 import type { Venue } from "@/lib/queries";
@@ -138,6 +139,10 @@ export default async function Home({ params, searchParams }: Props) {
   // are closed right now (their newest reading is from closing time).
   const nowMoment = madridMoment(now);
 
+  // Freshest reading across venues = the last successful scrape cycle. Surfaced
+  // as a single "Actualizado a las HH:MM" stamp; re-renders with the 60s refresh.
+  const lastUpdated = latestReadingTimestamp(liveReadings);
+
   // Per-venue chart inputs (only consumed when a venue is selected).
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
   // Baseline legend label for the plotted day's weekday, e.g. "Últimos sábados".
@@ -167,9 +172,16 @@ export default async function Home({ params, searchParams }: Props) {
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Aforo en tiempo real — todos los centros
-        </h2>
+        <div className="flex items-baseline justify-between gap-3 mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Aforo en tiempo real — todos los centros
+          </h2>
+          {lastUpdated && (
+            <p className="text-xs text-muted-foreground whitespace-nowrap">
+              {lastUpdatedLabel(formatMadridTime(lastUpdated))}
+            </p>
+          )}
+        </div>
         <Suspense>
           <LiveCards
             readings={liveReadings}

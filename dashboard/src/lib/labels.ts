@@ -22,6 +22,11 @@ export const FULL_DAY_LABELS = [
 
 export const TODAY_LABEL = "Hoy";
 
+/** "Actualizado a las 19:42" — freshness stamp for the live occupancy section. */
+export function lastUpdatedLabel(madridTime: string): string {
+  return `Actualizado a las ${madridTime}`;
+}
+
 /** Lowercase Spanish month abbreviations, January-indexed. */
 export const MONTH_LABELS = [
   "ene",
