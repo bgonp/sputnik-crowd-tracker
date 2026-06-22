@@ -9,6 +9,9 @@ import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { HeatmapSection } from "@/components/sections/HeatmapSection";
 import { TodayVsTypicalSection } from "@/components/sections/TodayVsTypicalSection";
 import { WeekdayFootfallSection } from "@/components/sections/WeekdayFootfallSection";
+import { TodayVsTypicalChart } from "@/components/TodayVsTypicalChart";
+import { HeatmapChart } from "@/components/HeatmapChart";
+import { WeekdayFootfallChart } from "@/components/WeekdayFootfallChart";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import {
@@ -269,7 +272,14 @@ export default async function Home({ params, searchParams }: Props) {
               className="h-64"
               icon={<LineChart className="h-6 w-6" />}
               label="Selecciona un rocódromo para comparar hoy con su media"
-            />
+            >
+              <TodayVsTypicalChart
+                data={[]}
+                dayLabel={TODAY_LABEL}
+                typicalLabel="media"
+                isToday={false}
+              />
+            </ChartPlaceholder>
           )}
         </CardContent>
       </Card>
@@ -291,11 +301,12 @@ export default async function Home({ params, searchParams }: Props) {
               </Suspense>
             ) : (
               <ChartPlaceholder
-                variant="grid"
                 className="h-64"
                 icon={<CalendarDays className="h-6 w-6" />}
                 label="Selecciona un rocódromo para ver su mapa de calor"
-              />
+              >
+                <HeatmapChart data={[]} venueId={-1} hours={[]} />
+              </ChartPlaceholder>
             )}
           </CardContent>
         </Card>
@@ -315,11 +326,12 @@ export default async function Home({ params, searchParams }: Props) {
               </Suspense>
             ) : (
               <ChartPlaceholder
-                variant="grid"
                 className="h-64"
                 icon={<BarChart3 className="h-6 w-6" />}
                 label="Selecciona un rocódromo para ver su día más y menos concurrido"
-              />
+              >
+                <WeekdayFootfallChart data={[]} />
+              </ChartPlaceholder>
             )}
           </CardContent>
         </Card>
