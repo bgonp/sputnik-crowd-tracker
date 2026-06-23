@@ -89,7 +89,7 @@ export function LiveCards({ readings, todayCounts, venueHours, nowMoment, select
             <CardContent className="relative z-10">
               {status.open ? (
                 <>
-                  <p className="text-3xl font-bold" style={occupancyColor(r.percentage)}>
+                  <p className="font-heading text-3xl font-bold" style={occupancyColor(r.percentage)}>
                     {r.percentage}%
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -103,7 +103,7 @@ export function LiveCards({ readings, todayCounts, venueHours, nowMoment, select
                 </>
               ) : (
                 <>
-                  <p className="text-3xl font-bold text-muted-foreground">Cerrado</p>
+                  <p className="font-heading text-3xl font-bold text-muted-foreground">Cerrado</p>
                   {status.opensAt && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Abre a las {status.opensAt}

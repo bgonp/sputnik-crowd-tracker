@@ -192,7 +192,7 @@ export default async function Home({ params, searchParams }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1
-            className="text-2xl bg-clip-text text-transparent w-fit"
+            className="font-heading text-2xl bg-clip-text text-transparent w-fit"
             style={{ backgroundImage: occupancyScaleGradientCss() }}
           >
             <span className="font-black">Sputnik</span>
@@ -206,7 +206,7 @@ export default async function Home({ params, searchParams }: Props) {
 
       <section>
         <div className="flex items-baseline justify-between gap-3 mb-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Aforo en tiempo real - todos los rocódromos
           </h2>
           {lastUpdated && (
@@ -238,7 +238,7 @@ export default async function Home({ params, searchParams }: Props) {
       <Card>
         <CardHeader>
           <div className="flex min-h-7 items-center justify-between gap-3">
-            <CardTitle className="text-base">
+            <CardTitle className="font-heading text-base">
               {dayLabel} vs. media{selectedVenueName && ` — ${selectedVenueName}`}
             </CardTitle>
             {selectedVenue && (
@@ -290,7 +290,7 @@ export default async function Home({ params, searchParams }: Props) {
           <CardHeader>
             {/* min-h-7 keeps this title aligned with the footfall card beside it. */}
             <div className="flex min-h-7 items-center">
-              <CardTitle className="text-base">
+              <CardTitle className="font-heading text-base">
                 Mapa de calor{selectedVenueName && ` — ${selectedVenueName}`}
               </CardTitle>
             </div>
@@ -315,7 +315,7 @@ export default async function Home({ params, searchParams }: Props) {
         <Card>
           <CardHeader>
             <div className="flex min-h-7 items-center">
-              <CardTitle className="text-base">
+              <CardTitle className="font-heading text-base">
                 Actividad por día de la semana{selectedVenueName && ` — ${selectedVenueName}`}
               </CardTitle>
             </div>
