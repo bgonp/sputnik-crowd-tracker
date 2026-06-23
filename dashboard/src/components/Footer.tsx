@@ -16,6 +16,15 @@ export function Footer() {
         >
           Código fuente
         </a>
+        <span aria-hidden>·</span>
+        <a
+          href="https://github.com/bgonp/sputnik-crowd-tracker/blob/main/CONTRIBUTING.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Contribuir
+        </a>
       </p>
     </footer>
   );
