@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
+import { Raleway } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
+
+const raleway = Raleway({
+  subsets: ["latin"],
+  variable: "--font-raleway",
+  display: "swap",
+});
 
 const title = "Aforo de Sputnik Climbing | Rocódromos en tiempo real";
 const description =
@@ -36,7 +43,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="h-full antialiased" suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${raleway.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
