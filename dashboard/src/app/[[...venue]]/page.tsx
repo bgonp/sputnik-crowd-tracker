@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Image from "next/image";
 import { notFound, permanentRedirect } from "next/navigation";
 import { CalendarDays, LineChart, BarChart3, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -190,7 +191,8 @@ export default async function Home({ params, searchParams }: Props) {
     <main className="container mx-auto px-4 py-8 space-y-8">
       <AutoRefresh intervalMs={60_000} />
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
+        <div className="flex items-center gap-3">
+          <Image src="/logo.webp" alt="Sputnik Crowd Tracker" width={40} height={40} priority />
           <h1
             className="font-heading text-3xl bg-clip-text text-transparent w-fit"
             style={{ backgroundImage: occupancyScaleGradientCss() }}
