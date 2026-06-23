@@ -212,6 +212,9 @@ export async function getWeekdayFootfall(
 ): Promise<WeekdayFootfall[]> {
   const offsetMod = madridOffsetModifier(now);
   const from = new Date(now.getTime() - weeks * 7 * 86_400_000).toISOString();
+  // Exclude today: `entries` is a still-accumulating counter, so the current
+  // day's MAX is partial and would drag down its weekday's average all morning.
+  const today = madridDateString(now);
   const result = await db.execute({
     sql: `
       SELECT dayRaw, ROUND(AVG(dailyTotal)) AS avgVisitors, COUNT(*) AS sampleDays
@@ -223,12 +226,12 @@ export async function getWeekdayFootfall(
         FROM readings
         WHERE venue_id = ? AND capacity > 0 AND timestamp >= ?
         GROUP BY date
-        HAVING dailyTotal IS NOT NULL
+        HAVING dailyTotal IS NOT NULL AND date < ?
       )
       GROUP BY dayRaw
       ORDER BY dayRaw
     `,
-    args: [offsetMod, offsetMod, venueId, from],
+    args: [offsetMod, offsetMod, venueId, from, today],
   });
   return toPlain<{ dayRaw: number; avgVisitors: number; sampleDays: number }>(result.rows).map(
     (r) => ({
