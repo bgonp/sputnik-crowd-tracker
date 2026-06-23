@@ -35,6 +35,8 @@ These docs are the project's source of truth for humans and agents — keep them
 
 Every task is done on its own branch and delivered as a PR. **Never commit directly to `main`, and never merge the PR yourself.**
 
+Before making any file changes, call `EnterWorktree` to isolate your work, using `.claude/worktrees/<branch-name>` as the path. All edits and git commands must run inside the worktree — never target the main checkout path.
+
 1. **Branch from fresh `main`:** `git switch main && git pull && git switch -c <type>/<short-kebab-desc>`. Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf` (e.g. `feat/venue-comparison`, `fix/madrid-dst-offset`).
 2. **Commit logically:** one concern per commit, imperative subject line. Group related changes; keep unrelated pre-existing changes in their own commits. End each commit message with the `Co-Authored-By` trailer.
 3. **Keep docs in sync** in the same PR (see the table above).
