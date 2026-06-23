@@ -6,7 +6,7 @@ export function Footer() {
       <p className="container mx-auto px-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         <span>Sitio no oficial, sin vinculación con Sputnik Climbing</span>
         <span aria-hidden>·</span>
-        <span>Datos de su API pública</span>
+        <span>Datos de su sitio web público</span>
         <span aria-hidden>·</span>
         <a
           href={`${REPO}/blob/main/LICENSE`}
