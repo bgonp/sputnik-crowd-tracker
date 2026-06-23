@@ -192,10 +192,11 @@ export default async function Home({ params, searchParams }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1
-            className="text-2xl font-bold bg-clip-text text-transparent w-fit"
+            className="text-2xl bg-clip-text text-transparent w-fit"
             style={{ backgroundImage: occupancyScaleGradientCss() }}
           >
-            Sputnik Climbing
+            <span className="font-black">Sputnik</span>
+            <span className="font-normal">Climbing</span>
           </h1>
         </div>
         <div className="flex items-center gap-2">
