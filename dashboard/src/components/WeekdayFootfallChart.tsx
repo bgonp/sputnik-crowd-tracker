@@ -81,7 +81,7 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
       </ChartContainer>
       {/* Green→red activity legend, mirroring the heatmap's. */}
       <div className="flex items-center justify-center gap-2 pt-3 text-xs text-muted-foreground">
-        <span>menos</span>
+        <span>menos actividad</span>
         <div
           className="h-3 w-32 rounded-sm"
           style={{ background: "linear-gradient(to right, hsl(120 70% 60%), hsl(72 70% 60%), hsl(40 70% 60%), hsl(20 70% 60%), hsl(0 70% 60%))" }}

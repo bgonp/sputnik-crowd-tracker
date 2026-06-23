@@ -137,6 +137,10 @@ describe("getWeekdayFootfall", () => {
     expect(sql).not.toContain("7");
     // Lower bound is 8 weeks (56 days) before now.
     expect(args).toContain("2026-04-27T12:00:00.000Z");
+    // Today is excluded — its MAX(entries) is still accumulating, so a partial
+    // total would drag down its weekday's average.
+    expect(sql).toMatch(/date < \?/i);
+    expect(args).toContain("2026-06-22");
   });
 });
 
