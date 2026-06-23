@@ -192,7 +192,7 @@ export default async function Home({ params, searchParams }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1
-            className="font-heading text-2xl bg-clip-text text-transparent w-fit"
+            className="font-heading text-3xl bg-clip-text text-transparent w-fit"
             style={{ backgroundImage: occupancyScaleGradientCss() }}
           >
             <span className="font-black">Sputnik</span>
