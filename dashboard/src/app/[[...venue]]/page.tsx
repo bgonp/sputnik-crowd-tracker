@@ -207,7 +207,7 @@ export default async function Home({ params, searchParams }: Props) {
       <section>
         <div className="flex items-baseline justify-between gap-3 mb-3">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Aforo en tiempo real - todos los rocódromos
+            Aforo de rocódromos en tiempo real
           </h2>
           {lastUpdated && (
             <p
