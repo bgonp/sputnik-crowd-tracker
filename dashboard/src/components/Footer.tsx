@@ -1,3 +1,5 @@
+const REPO = "https://github.com/bgonp/sputnik-crowd-tracker";
+
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-border/40 py-4 text-xs text-muted-foreground">
@@ -6,10 +8,17 @@ export function Footer() {
         <span aria-hidden>·</span>
         <span>Datos de su API pública</span>
         <span aria-hidden>·</span>
-        <span>MIT © 2026</span>
+        <a
+          href={`${REPO}/blob/main/LICENSE`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          MIT © 2026
+        </a>
         <span aria-hidden>·</span>
         <a
-          href="https://github.com/bgonp/sputnik-crowd-tracker"
+          href={REPO}
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:text-foreground transition-colors"
@@ -18,7 +27,7 @@ export function Footer() {
         </a>
         <span aria-hidden>·</span>
         <a
-          href="https://github.com/bgonp/sputnik-crowd-tracker/blob/main/CONTRIBUTING.md"
+          href={`${REPO}/blob/main/CONTRIBUTING.md`}
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:text-foreground transition-colors"
