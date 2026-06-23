@@ -2,8 +2,30 @@ import { describe, it, expect } from "vitest";
 import {
   occupancyColor,
   occupancyGradientStops,
+  occupancyHue,
   occupancyScaleGradientCss,
 } from "../occupancy-color";
+
+describe("occupancyHue", () => {
+  it("runs from green (120) at 0% to red (0) at 100%", () => {
+    expect(occupancyHue(0)).toBe(120);
+    expect(occupancyHue(100)).toBe(0);
+  });
+
+  it("clamps out-of-range values to the ends", () => {
+    expect(occupancyHue(-20)).toBe(occupancyHue(0));
+    expect(occupancyHue(150)).toBe(occupancyHue(100));
+  });
+
+  it("eases toward green so mid values stay below the linear midpoint", () => {
+    // sqrt easing: 50% → 120 - sqrt(0.5)*120 ≈ 35.1, not the linear 60.
+    expect(occupancyHue(50)).toBeCloseTo(35.147, 2);
+  });
+
+  it("backs the occupancyColor string", () => {
+    expect(occupancyColor(50)).toBe(`hsl(${occupancyHue(50).toFixed(1)} 70% 60%)`);
+  });
+});
 
 describe("occupancyColor", () => {
   it("maps 0% to green (hue 120) and 100% to red (hue 0)", () => {

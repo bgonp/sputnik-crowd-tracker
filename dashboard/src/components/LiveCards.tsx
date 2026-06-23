@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OccupancyWave } from "@/components/OccupancyWave";
 import type { DailyVisitorCount, LiveReading, VenueHours } from "@/lib/queries";
+import { occupancyHue } from "@/lib/occupancy-color";
 import { openStatusFor, type MadridMoment } from "@/lib/open-status";
 import { shortVenueName, venueSlug } from "@/lib/venues";
 
 function occupancyColor(pct: number): React.CSSProperties {
-  const hue = 120 - Math.pow(pct / 100, 0.5) * 120;
-  return { color: `hsl(${hue.toFixed(1)} 70% 45%)` };
+  return { color: `hsl(${occupancyHue(pct).toFixed(1)} 70% 45%)` };
 }
 
 interface Props {
@@ -70,9 +71,12 @@ export function LiveCards({ readings, todayCounts, venueHours, nowMoment, select
                 selectVenue(r.venueId, r.venueName);
               }
             }}
-            className={`group cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50 hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
+            className={`group relative cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50 hover:shadow-md"} ${isLoading ? "opacity-70" : ""}`}
           >
-            <CardHeader className="pb-1">
+            {/* Occupancy "tank" fill behind the stats; the content below sits on
+                top via z-10. */}
+            <OccupancyWave pct={r.percentage} open={status.open} seed={r.venueId} />
+            <CardHeader className="relative z-10 pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                 {shortVenueName(r.venueName)}
                 {isLoading ? (
@@ -82,7 +86,7 @@ export function LiveCards({ readings, todayCounts, venueHours, nowMoment, select
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               {status.open ? (
                 <>
                   <p className="text-3xl font-bold" style={occupancyColor(r.percentage)}>
