@@ -2,12 +2,21 @@
 // the today-vs-typical line so the two charts read on the same scale: low
 // occupancy is green, high is red.
 
+/**
+ * Green→red HSL hue (120 = green … 0 = red) for an occupancy percentage
+ * (0–100), with sqrt easing so the lower (greener) range spreads out. This is
+ * the single source of the scale's easing; callers that need a different
+ * lightness/alpha (the live cards' text, the wave fill) build their own
+ * `hsl(...)` from this hue.
+ */
+export function occupancyHue(pct: number): number {
+  const clamped = Math.max(0, Math.min(100, pct));
+  return 120 - Math.pow(clamped / 100, 0.5) * 120;
+}
+
 /** HSL colour for an occupancy percentage (0–100): green at 0%, red at 100%. */
 export function occupancyColor(pct: number): string {
-  const clamped = Math.max(0, Math.min(100, pct));
-  // sqrt easing so the lower (greener) range spreads out, matching the heatmap.
-  const hue = 120 - Math.pow(clamped / 100, 0.5) * 120;
-  return `hsl(${hue.toFixed(1)} 70% 60%)`;
+  return `hsl(${occupancyHue(pct).toFixed(1)} 70% 60%)`;
 }
 
 export interface GradientStop {
