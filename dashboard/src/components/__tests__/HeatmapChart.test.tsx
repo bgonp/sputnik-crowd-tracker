@@ -77,13 +77,13 @@ describe("HeatmapChart", () => {
     const mie = screen.getByText("Mié");
     expect(mie.className).toContain("font-semibold");
     expect(mie.className).toContain("text-foreground");
-    // Row container (parent of the label) carries the background tint.
-    expect(mie.parentElement?.className).toContain("bg-foreground");
+    // Row container (parent of the label) carries the ring outline.
+    expect(mie.parentElement?.className).toContain("ring-foreground");
 
     const lun = screen.getByText("Lun");
     expect(lun.className).not.toContain("font-semibold");
     expect(lun.className).toContain("text-muted-foreground");
-    expect(lun.parentElement?.className).not.toContain("bg-foreground");
+    expect(lun.parentElement?.className).not.toContain("ring-foreground");
   });
 
   it("renders all row labels as muted when todayWeekday is not provided", () => {
@@ -91,6 +91,6 @@ describe("HeatmapChart", () => {
     const lun = screen.getByText("Lun");
     expect(lun.className).toContain("text-muted-foreground");
     expect(lun.className).not.toContain("font-semibold");
-    expect(lun.parentElement?.className).not.toContain("bg-foreground");
+    expect(lun.parentElement?.className).not.toContain("ring-foreground");
   });
 });
