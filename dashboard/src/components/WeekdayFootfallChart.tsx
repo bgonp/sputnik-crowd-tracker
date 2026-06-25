@@ -45,8 +45,8 @@ export function WeekdayFootfallChart({
     y,
     payload,
   }: {
-    x: number;
-    y: number;
+    x: number | string;
+    y: number | string;
     payload: { value: string; index: number };
   }) => {
     const isToday = todayWeekday !== undefined && payload.index === todayWeekday;
