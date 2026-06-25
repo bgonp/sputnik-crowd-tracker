@@ -15,11 +15,13 @@ export function HeatmapChart({
   venueId,
   hours,
   todayWeekday,
+  currentHour,
 }: {
   data: HeatmapCell[];
   venueId: number;
   hours: VenueHours[];
   todayWeekday?: number;
+  currentHour?: number;
 }) {
   const lookup = new Map(data.map((d) => [`${d.day}-${d.hour}`, d.avgPercentage]));
 
@@ -33,16 +35,24 @@ export function HeatmapChart({
         <div className="flex h-full flex-col">
           <div className="flex shrink-0">
             <div className="w-8 shrink-0" />
-            {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((label, i) => (
-              <div key={i} className="flex-1 m-px text-center text-[10px] text-muted-foreground">
-                {label.slice(0, 2)}
-              </div>
-            ))}
+            {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((label, i) => {
+              const h = i + HEATMAP_FIRST_HOUR;
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 m-px text-center text-[10px] ${
+                    h === currentHour ? "font-semibold text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label.slice(0, 2)}
+                </div>
+              );
+            })}
           </div>
           {DAY_LABELS.map((day, d) => (
             <div
               key={d}
-              className={`flex flex-1 gap-0 rounded-sm ${d === todayWeekday ? "ring-1 ring-foreground" : ""}`}
+              className={`flex flex-1 gap-0 rounded-sm ${d === todayWeekday ? "bg-foreground/[0.05]" : ""}`}
             >
               <div
                 className={`w-8 shrink-0 flex items-center justify-end pr-1 text-[11px] ${
@@ -57,12 +67,13 @@ export function HeatmapChart({
                 // flagged as closed, so the grid clearly reads as "the gym was closed
                 // then" — distinct from both colored data and the flat muted "Sin
                 // datos" of an open hour with no readings.
+                const isNow = d === todayWeekday && h === currentHour;
                 if (!isHeatmapCellOpen(hours, venueId, d, h)) {
                   return (
                     <div
                       key={h}
                       title={`${day} ${HOUR_LABELS[h]}: cerrado`}
-                      className="flex-1 m-px rounded-sm bg-muted"
+                      className={`flex-1 m-px rounded-sm bg-muted ${isNow ? "ring-2 ring-foreground" : ""}`}
                       style={{
                         backgroundImage:
                           "repeating-linear-gradient(45deg, color-mix(in oklch, var(--color-muted-foreground) 35%, transparent) 0, color-mix(in oklch, var(--color-muted-foreground) 35%, transparent) 1px, transparent 1px, transparent 5px)",
@@ -75,7 +86,7 @@ export function HeatmapChart({
                   <div
                     key={h}
                     title={pct > 0 ? `${day} ${HOUR_LABELS[h]}: ${pct}%` : "Sin datos"}
-                    className={`flex-1 m-px rounded-sm flex items-center justify-center ${pct === 0 ? "bg-muted" : ""}`}
+                    className={`flex-1 m-px rounded-sm flex items-center justify-center ${pct === 0 ? "bg-muted" : ""} ${isNow ? "ring-2 ring-foreground" : ""}`}
                     style={cellStyle(pct)}
                   >
                     {pct > 0 && (

@@ -70,20 +70,20 @@ describe("HeatmapChart", () => {
     expect(screen.queryByTitle(/cerrado$/)).not.toBeInTheDocument();
   });
 
-  it("highlights today's row: bold label and background tint on the row container", () => {
+  it("highlights today's row: bold label and ring on the row container", () => {
     // todayWeekday=2 → Wednesday ("Mié")
     render(<HeatmapChart data={[]} venueId={1} hours={allDayHours} todayWeekday={2} />);
 
     const mie = screen.getByText("Mié");
     expect(mie.className).toContain("font-semibold");
     expect(mie.className).toContain("text-foreground");
-    // Row container (parent of the label) carries the ring outline.
-    expect(mie.parentElement?.className).toContain("ring-foreground");
+    // Row container (parent of the label) carries the background tint.
+    expect(mie.parentElement?.className).toContain("bg-foreground");
 
     const lun = screen.getByText("Lun");
     expect(lun.className).not.toContain("font-semibold");
     expect(lun.className).toContain("text-muted-foreground");
-    expect(lun.parentElement?.className).not.toContain("ring-foreground");
+    expect(lun.parentElement?.className).not.toContain("bg-foreground");
   });
 
   it("renders all row labels as muted when todayWeekday is not provided", () => {
@@ -91,6 +91,35 @@ describe("HeatmapChart", () => {
     const lun = screen.getByText("Lun");
     expect(lun.className).toContain("text-muted-foreground");
     expect(lun.className).not.toContain("font-semibold");
-    expect(lun.parentElement?.className).not.toContain("ring-foreground");
+    expect(lun.parentElement?.className).not.toContain("bg-foreground");
+  });
+
+  it("highlights the current hour: bold column header and ring on the today cell", () => {
+    // todayWeekday=0 (Mon), currentHour=18 → "Sin datos" cell at Mon 18:00 gets a ring.
+    render(
+      <HeatmapChart data={[]} venueId={1} hours={allDayHours} todayWeekday={0} currentHour={18} />
+    );
+
+    // Column header "18" is bold + foreground.
+    const headers = screen.getAllByText("18");
+    expect(headers[0]?.className).toContain("font-semibold");
+    expect(headers[0]?.className).toContain("text-foreground");
+
+    // Other column headers remain muted.
+    const headers10 = screen.getAllByText("10");
+    expect(headers10[0]?.className).not.toContain("font-semibold");
+
+    // The Mon 18:00 cell (today's row, current hour) has a ring. The ringed
+    // cell is uniquely identified by having ring-foreground in its className.
+    const ringedCells = document.querySelectorAll("[class*='ring-foreground']");
+    // Only the current-hour cell carries the ring (the row uses a bg tint instead).
+    expect(ringedCells.length).toBe(1);
+  });
+
+  it("does not ring any cell when currentHour is not provided", () => {
+    render(<HeatmapChart data={[]} venueId={1} hours={allDayHours} todayWeekday={0} />);
+    // The row uses a bg tint, not a ring — so no ring-foreground elements at all.
+    const ringedCells = document.querySelectorAll("[class*='ring-foreground']");
+    expect(ringedCells.length).toBe(0);
   });
 });

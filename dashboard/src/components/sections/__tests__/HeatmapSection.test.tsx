@@ -12,7 +12,7 @@ vi.mock("@/lib/cached-queries", () => ({ getCachedHeatmap, getCachedVenueHours }
 // without rendering the full grid.
 const { chartSpy } = vi.hoisted(() => ({ chartSpy: vi.fn() }));
 vi.mock("@/components/HeatmapChart", () => ({
-  HeatmapChart: (props: { data: HeatmapCell[]; venueId: number; hours: VenueHours[]; todayWeekday: number }) => {
+  HeatmapChart: (props: { data: HeatmapCell[]; venueId: number; hours: VenueHours[]; todayWeekday: number; currentHour: number }) => {
     chartSpy(props);
     return <div data-testid="heatmap-chart" />;
   },
@@ -31,11 +31,11 @@ beforeEach(() => {
 
 describe("HeatmapSection", () => {
   it("fetches the heatmap and venue hours and passes them to the chart", async () => {
-    const element = await HeatmapSection({ venueId: 7, todayWeekday: 3 });
+    const element = await HeatmapSection({ venueId: 7, todayWeekday: 3, currentHour: 14 });
     render(element);
 
     expect(getCachedHeatmap).toHaveBeenCalledWith([7]);
     expect(getCachedVenueHours).toHaveBeenCalled();
-    expect(chartSpy).toHaveBeenCalledWith({ data: DATA, venueId: 7, hours: HOURS, todayWeekday: 3 });
+    expect(chartSpy).toHaveBeenCalledWith({ data: DATA, venueId: 7, hours: HOURS, todayWeekday: 3, currentHour: 14 });
   });
 });
