@@ -69,4 +69,24 @@ describe("HeatmapChart", () => {
     expect(screen.getAllByTitle("Sin datos").length).toBe(18 * 7);
     expect(screen.queryByTitle(/cerrado$/)).not.toBeInTheDocument();
   });
+
+  it("highlights today's row label as bold and foreground, others as muted", () => {
+    // todayWeekday=2 → Wednesday ("Mié")
+    render(<HeatmapChart data={[]} venueId={1} hours={allDayHours} todayWeekday={2} />);
+
+    const mie = screen.getByText("Mié");
+    expect(mie.className).toContain("font-semibold");
+    expect(mie.className).toContain("text-foreground");
+
+    const lun = screen.getByText("Lun");
+    expect(lun.className).not.toContain("font-semibold");
+    expect(lun.className).toContain("text-muted-foreground");
+  });
+
+  it("renders all row labels as muted when todayWeekday is not provided", () => {
+    render(<HeatmapChart data={[]} venueId={1} hours={allDayHours} />);
+    const lun = screen.getByText("Lun");
+    expect(lun.className).toContain("text-muted-foreground");
+    expect(lun.className).not.toContain("font-semibold");
+  });
 });

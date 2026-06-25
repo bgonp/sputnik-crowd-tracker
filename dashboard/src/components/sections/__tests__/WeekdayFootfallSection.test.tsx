@@ -11,7 +11,7 @@ vi.mock("@/lib/cached-queries", () => ({ getCachedWeekdayFootfall }));
 // the (brittle) Recharts internals.
 const { chartSpy } = vi.hoisted(() => ({ chartSpy: vi.fn() }));
 vi.mock("@/components/WeekdayFootfallChart", () => ({
-  WeekdayFootfallChart: (props: { data: WeekdayFootfall[] }) => {
+  WeekdayFootfallChart: (props: { data: WeekdayFootfall[]; todayWeekday: number }) => {
     chartSpy(props);
     return <div data-testid="weekday-footfall-chart" />;
   },
@@ -34,10 +34,11 @@ describe("WeekdayFootfallSection", () => {
     const element = await WeekdayFootfallSection({
       venueId: 7,
       dayIso: "2026-06-22T12:00:00.000Z",
+      todayWeekday: 6,
     });
     render(element);
 
     expect(getCachedWeekdayFootfall).toHaveBeenCalledWith(7, "2026-06-22T12:00:00.000Z");
-    expect(chartSpy).toHaveBeenCalledWith({ data: DATA });
+    expect(chartSpy).toHaveBeenCalledWith({ data: DATA, todayWeekday: 6 });
   });
 });

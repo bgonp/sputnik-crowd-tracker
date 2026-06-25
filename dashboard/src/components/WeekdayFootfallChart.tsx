@@ -15,7 +15,13 @@ import {
   type WeekdayFootfallDatum,
 } from "@/lib/weekday-footfall";
 
-export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
+export function WeekdayFootfallChart({
+  data,
+  todayWeekday,
+}: {
+  data: WeekdayFootfall[];
+  todayWeekday?: number;
+}) {
   const series = buildWeekdayFootfallSeries(data);
   // Quietest day → green, busiest → red, on the same scale as the heatmap, so
   // the best and worst days to visit pop out. null (no data / all tied) = muted.
@@ -32,12 +38,42 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
     avgVisitors: { label: "Visitantes", color: "var(--primary)" },
   };
 
+  // Custom XAxis tick: today's label is bold + foreground with a small dot
+  // underneath; all other days use the standard muted style.
+  const xAxisTick = ({
+    x,
+    y,
+    payload,
+  }: {
+    x: number;
+    y: number;
+    payload: { value: string; index: number };
+  }) => {
+    const isToday = todayWeekday !== undefined && payload.index === todayWeekday;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={12}
+          textAnchor="middle"
+          fontSize={11}
+          fontWeight={isToday ? 600 : 400}
+          fill={isToday ? "var(--foreground)" : "var(--muted-foreground)"}
+        >
+          {payload.value}
+        </text>
+        {isToday && <circle cx={0} cy={20} r={2} fill="var(--foreground)" />}
+      </g>
+    );
+  };
+
   return (
     <div className="flex h-64 flex-col">
       <ChartContainer config={config} className="min-h-0 flex-1 w-full">
         <BarChart data={series} margin={{ top: 8, right: 12 }}>
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="label" interval={0} tick={{ fontSize: 11 }} />
+          <XAxis dataKey="label" interval={0} tick={xAxisTick} height={28} />
           <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={36} />
           <ChartTooltip
             content={
