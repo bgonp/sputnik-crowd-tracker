@@ -174,6 +174,9 @@ export default async function Home({ params, searchParams }: Props) {
 
   // Per-venue chart inputs (only consumed when a venue is selected).
   const selectedVenueName = selectedVenue ? shortVenueName(selectedVenue.name) : "";
+  // Monday-indexed weekday for today in Madrid (0=Mon … 6=Sun) — highlights the
+  // current day row/bar in the heatmap and weekday footfall chart.
+  const todayWeekday = mondayIndexedWeekday(todayStr);
   // Baseline legend label for the plotted day's weekday, e.g. "Últimos sábados".
   const typicalLabel = lastWeekdaysLabel(mondayIndexedWeekday(selectedDate));
   // Primary-line label + card-title fragment: "Hoy" today, else "Sáb 20 jun".
@@ -300,7 +303,7 @@ export default async function Home({ params, searchParams }: Props) {
           <CardContent>
             {selectedVenue ? (
               <Suspense fallback={<ChartSkeleton className="h-64" />}>
-                <HeatmapSection venueId={selectedVenue.id} />
+                <HeatmapSection venueId={selectedVenue.id} todayWeekday={todayWeekday} />
               </Suspense>
             ) : (
               <ChartPlaceholder
@@ -325,7 +328,7 @@ export default async function Home({ params, searchParams }: Props) {
           <CardContent>
             {selectedVenue ? (
               <Suspense fallback={<ChartSkeleton className="h-64" />}>
-                <WeekdayFootfallSection venueId={selectedVenue.id} dayIso={dayKeyIso} />
+                <WeekdayFootfallSection venueId={selectedVenue.id} dayIso={dayKeyIso} todayWeekday={todayWeekday} />
               </Suspense>
             ) : (
               <ChartPlaceholder

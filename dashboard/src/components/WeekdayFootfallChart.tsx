@@ -15,7 +15,13 @@ import {
   type WeekdayFootfallDatum,
 } from "@/lib/weekday-footfall";
 
-export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
+export function WeekdayFootfallChart({
+  data,
+  todayWeekday,
+}: {
+  data: WeekdayFootfall[];
+  todayWeekday?: number;
+}) {
   const series = buildWeekdayFootfallSeries(data);
   // Quietest day → green, busiest → red, on the same scale as the heatmap, so
   // the best and worst days to visit pop out. null (no data / all tied) = muted.
@@ -32,12 +38,42 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
     avgVisitors: { label: "Visitantes", color: "var(--primary)" },
   };
 
+  // Custom XAxis tick: today's label is bold + foreground with a small dot
+  // underneath; all other days use the standard muted style.
+  const xAxisTick = ({
+    x,
+    y,
+    payload,
+  }: {
+    x: number | string;
+    y: number | string;
+    payload: { value: string; index: number };
+  }) => {
+    const isToday = todayWeekday !== undefined && payload.index === todayWeekday;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={12}
+          textAnchor="middle"
+          fontSize={11}
+          fontWeight={isToday ? 600 : 400}
+          fill={isToday ? "var(--foreground)" : "var(--muted-foreground)"}
+        >
+          {payload.value}
+        </text>
+        {isToday && <circle cx={0} cy={20} r={2} fill="var(--foreground)" />}
+      </g>
+    );
+  };
+
   return (
     <div className="flex h-64 flex-col">
       <ChartContainer config={config} className="min-h-0 flex-1 w-full">
         <BarChart data={series} margin={{ top: 8, right: 12 }}>
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="label" interval={0} tick={{ fontSize: 11 }} />
+          <XAxis dataKey="label" interval={0} tick={xAxisTick} height={28} />
           <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={36} />
           <ChartTooltip
             content={
@@ -61,7 +97,12 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
           />
           <Bar dataKey="avgVisitors" radius={[3, 3, 0, 0]} isAnimationActive={false}>
             {series.map((d, i) => (
-              <Cell key={d.day} fill={barColor(i)} />
+              <Cell
+                key={d.day}
+                fill={barColor(i)}
+                stroke={i === todayWeekday ? "var(--foreground)" : undefined}
+                strokeWidth={i === todayWeekday ? 1.5 : undefined}
+              />
             ))}
           </Bar>
           {overallAverage != null && (
@@ -69,11 +110,26 @@ export function WeekdayFootfallChart({ data }: { data: WeekdayFootfall[] }) {
               y={overallAverage}
               stroke="var(--foreground)"
               strokeDasharray="4 3"
-              label={{
-                value: `media ${overallAverage}`,
-                position: "insideTopRight",
-                fontSize: 11,
-                fill: "var(--muted-foreground)",
+              label={({ viewBox }: { viewBox?: { x?: number; y?: number; width?: number } }) => {
+                const vx = viewBox?.x ?? 0;
+                const vy = viewBox?.y ?? 0;
+                const vw = viewBox?.width ?? 0;
+                const labelText = `media ${overallAverage}`;
+                const fontSize = 11;
+                const px = 5;
+                const py = 2;
+                const rectW = labelText.length * 6.5 + px * 2;
+                const rectH = fontSize + py * 2;
+                const rectX = vx + vw - rectW - 2;
+                const rectY = vy - rectH - 3;
+                return (
+                  <g>
+                    <rect x={rectX} y={rectY} width={rectW} height={rectH} rx={4} fill="var(--card)" />
+                    <text x={rectX + px} y={rectY + rectH - py - 1} fontSize={fontSize} fill="var(--muted-foreground)">
+                      {labelText}
+                    </text>
+                  </g>
+                );
               }}
             />
           )}

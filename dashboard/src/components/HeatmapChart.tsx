@@ -14,10 +14,12 @@ export function HeatmapChart({
   data,
   venueId,
   hours,
+  todayWeekday,
 }: {
   data: HeatmapCell[];
   venueId: number;
   hours: VenueHours[];
+  todayWeekday?: number;
 }) {
   const lookup = new Map(data.map((d) => [`${d.day}-${d.hour}`, d.avgPercentage]));
 
@@ -38,8 +40,15 @@ export function HeatmapChart({
             ))}
           </div>
           {DAY_LABELS.map((day, d) => (
-            <div key={d} className="flex flex-1 gap-0">
-              <div className="w-8 shrink-0 flex items-center justify-end pr-1 text-[11px] text-muted-foreground">
+            <div
+              key={d}
+              className={`flex flex-1 gap-0 rounded-sm ${d === todayWeekday ? "ring-1 ring-foreground" : ""}`}
+            >
+              <div
+                className={`w-8 shrink-0 flex items-center justify-end pr-1 text-[11px] ${
+                  d === todayWeekday ? "font-semibold text-foreground" : "text-muted-foreground"
+                }`}
+              >
                 {day}
               </div>
               {HOUR_LABELS.slice(HEATMAP_FIRST_HOUR).map((_, i) => {
