@@ -40,7 +40,10 @@ export function HeatmapChart({
             ))}
           </div>
           {DAY_LABELS.map((day, d) => (
-            <div key={d} className="flex flex-1 gap-0">
+            <div
+              key={d}
+              className={`flex flex-1 gap-0 rounded-sm ${d === todayWeekday ? "bg-foreground/[0.05]" : ""}`}
+            >
               <div
                 className={`w-8 shrink-0 flex items-center justify-end pr-1 text-[11px] ${
                   d === todayWeekday ? "font-semibold text-foreground" : "text-muted-foreground"

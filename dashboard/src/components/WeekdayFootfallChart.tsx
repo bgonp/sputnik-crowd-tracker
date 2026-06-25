@@ -97,7 +97,12 @@ export function WeekdayFootfallChart({
           />
           <Bar dataKey="avgVisitors" radius={[3, 3, 0, 0]} isAnimationActive={false}>
             {series.map((d, i) => (
-              <Cell key={d.day} fill={barColor(i)} />
+              <Cell
+                key={d.day}
+                fill={barColor(i)}
+                stroke={i === todayWeekday ? "var(--foreground)" : undefined}
+                strokeWidth={i === todayWeekday ? 1.5 : undefined}
+              />
             ))}
           </Bar>
           {overallAverage != null && (
