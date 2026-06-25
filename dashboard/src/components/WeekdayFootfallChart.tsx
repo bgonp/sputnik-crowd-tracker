@@ -110,11 +110,26 @@ export function WeekdayFootfallChart({
               y={overallAverage}
               stroke="var(--foreground)"
               strokeDasharray="4 3"
-              label={{
-                value: `media ${overallAverage}`,
-                position: "insideTopRight",
-                fontSize: 11,
-                fill: "var(--muted-foreground)",
+              label={({ viewBox }: { viewBox?: { x?: number; y?: number; width?: number } }) => {
+                const vx = viewBox?.x ?? 0;
+                const vy = viewBox?.y ?? 0;
+                const vw = viewBox?.width ?? 0;
+                const labelText = `media ${overallAverage}`;
+                const fontSize = 11;
+                const px = 5;
+                const py = 2;
+                const rectW = labelText.length * 6.5 + px * 2;
+                const rectH = fontSize + py * 2;
+                const rectX = vx + vw - rectW - 2;
+                const rectY = vy - rectH - 3;
+                return (
+                  <g>
+                    <rect x={rectX} y={rectY} width={rectW} height={rectH} rx={4} fill="var(--card)" />
+                    <text x={rectX + px} y={rectY + rectH - py - 1} fontSize={fontSize} fill="var(--muted-foreground)">
+                      {labelText}
+                    </text>
+                  </g>
+                );
               }}
             />
           )}
