@@ -177,6 +177,8 @@ export default async function Home({ params, searchParams }: Props) {
   // Monday-indexed weekday for today in Madrid (0=Mon … 6=Sun) — highlights the
   // current day row/bar in the heatmap and weekday footfall chart.
   const todayWeekday = mondayIndexedWeekday(todayStr);
+  // Current hour in Madrid (0–23) — highlights the column header and cell in the heatmap.
+  const currentHour = Math.floor(nowMoment.minuteOfDay / 60);
   // Baseline legend label for the plotted day's weekday, e.g. "Últimos sábados".
   const typicalLabel = lastWeekdaysLabel(mondayIndexedWeekday(selectedDate));
   // Primary-line label + card-title fragment: "Hoy" today, else "Sáb 20 jun".
@@ -303,7 +305,7 @@ export default async function Home({ params, searchParams }: Props) {
           <CardContent>
             {selectedVenue ? (
               <Suspense fallback={<ChartSkeleton className="h-64" />}>
-                <HeatmapSection venueId={selectedVenue.id} todayWeekday={todayWeekday} />
+                <HeatmapSection venueId={selectedVenue.id} todayWeekday={todayWeekday} currentHour={currentHour} />
               </Suspense>
             ) : (
               <ChartPlaceholder
