@@ -2,7 +2,7 @@
 
 import { useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
   const router = useRouter();
@@ -57,9 +57,15 @@ export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
   }, [router, intervalMs, startTransition]);
 
   return isPending ? (
-    <Loader2
-      aria-label="Actualizando"
-      className="size-3.5 animate-spin text-muted-foreground"
-    />
-  ) : null;
+    <Loader2 aria-hidden className="size-3.5 animate-spin text-muted-foreground" />
+  ) : (
+    <button
+      type="button"
+      onClick={() => startTransition(() => router.refresh())}
+      aria-label="Actualizar"
+      className="text-muted-foreground hover:text-foreground transition-colors"
+    >
+      <RefreshCw aria-hidden className="size-3.5" />
+    </button>
+  );
 }
