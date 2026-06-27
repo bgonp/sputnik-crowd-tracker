@@ -63,7 +63,7 @@ export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
       type="button"
       onClick={() => startTransition(() => router.refresh())}
       aria-label="Actualizar"
-      className="text-muted-foreground hover:text-foreground transition-colors"
+      className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
     >
       <RefreshCw aria-hidden className="size-3.5" />
     </button>
