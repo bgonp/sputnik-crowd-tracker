@@ -6,7 +6,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 import { AutoRefresh } from "../AutoRefresh";
 
-let focused = true;
 function setVisibility(value: "visible" | "hidden") {
   Object.defineProperty(document, "visibilityState", {
     configurable: true,
@@ -17,8 +16,6 @@ function setVisibility(value: "visible" | "hidden") {
 beforeEach(() => {
   vi.useFakeTimers();
   refresh.mockReset();
-  focused = true;
-  document.hasFocus = () => focused;
   setVisibility("visible");
 });
 
@@ -27,7 +24,7 @@ afterEach(() => {
 });
 
 describe("AutoRefresh", () => {
-  it("refreshes on each interval while the tab is active", () => {
+  it("refreshes on each interval while the tab is visible", () => {
     render(<AutoRefresh intervalMs={1000} />);
     expect(refresh).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1000);
@@ -48,19 +45,24 @@ describe("AutoRefresh", () => {
     expect(refresh).toHaveBeenCalledTimes(1); // no further refreshes while hidden
   });
 
-  it("refreshes immediately and resumes when the tab becomes active again", () => {
+  it("refreshes immediately and resumes when the tab becomes visible again", () => {
     setVisibility("hidden");
-    focused = false;
     render(<AutoRefresh intervalMs={1000} />);
     vi.advanceTimersByTime(2000);
-    expect(refresh).not.toHaveBeenCalled(); // inactive at mount → no polling
+    expect(refresh).not.toHaveBeenCalled(); // hidden at mount → no polling
 
     setVisibility("visible");
-    focused = true;
     document.dispatchEvent(new Event("visibilitychange"));
-    expect(refresh).toHaveBeenCalledTimes(1); // immediate refresh on becoming active
+    expect(refresh).toHaveBeenCalledTimes(1); // immediate refresh on becoming visible
 
     vi.advanceTimersByTime(1000);
     expect(refresh).toHaveBeenCalledTimes(2); // and resumes polling
+  });
+
+  it("does not poll when mounted while hidden", () => {
+    setVisibility("hidden");
+    render(<AutoRefresh intervalMs={1000} />);
+    vi.advanceTimersByTime(5000);
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

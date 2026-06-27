@@ -1,20 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     let id: ReturnType<typeof setInterval> | undefined;
 
-    // Only poll while the tab is both visible and focused, so backgrounded or
-    // unfocused tabs stop hitting the database (keeps Turso reads down).
-    const isActive = () =>
-      document.visibilityState === "visible" && document.hasFocus();
+    // Pause while the tab is hidden; resume the moment it becomes visible again.
+    // We intentionally do NOT check hasFocus() here — that check caused a race:
+    // visibilitychange fires before the browser updates hasFocus(), so the
+    // transition was missed and polling never restarted after a tab switch.
+    const isVisible = () => document.visibilityState === "visible";
 
-    let active = isActive();
+    let visible = isVisible();
+
+    const doRefresh = () => startTransition(() => router.refresh());
 
     const stop = () => {
       if (id !== undefined) {
@@ -25,37 +30,36 @@ export function AutoRefresh({ intervalMs = 60_000 }: { intervalMs?: number }) {
 
     const start = () => {
       if (id === undefined) {
-        id = setInterval(() => router.refresh(), intervalMs);
+        id = setInterval(doRefresh, intervalMs);
       }
     };
 
     const sync = () => {
-      const nowActive = isActive();
-      // Returning to a tab fires both `visibilitychange` and `focus`; only act
-      // on a real transition so we don't refresh twice back-to-back.
-      if (nowActive === active) return;
-      active = nowActive;
+      const nowVisible = isVisible();
+      if (nowVisible === visible) return;
+      visible = nowVisible;
 
-      if (nowActive) {
-        router.refresh(); // pull fresh data the moment the tab becomes active again
+      if (nowVisible) {
+        doRefresh(); // pull fresh data the moment the tab becomes visible again
         start();
       } else {
         stop();
       }
     };
 
-    if (active) start();
+    if (visible) start();
     document.addEventListener("visibilitychange", sync);
-    window.addEventListener("focus", sync);
-    window.addEventListener("blur", sync);
 
     return () => {
       stop();
       document.removeEventListener("visibilitychange", sync);
-      window.removeEventListener("focus", sync);
-      window.removeEventListener("blur", sync);
     };
-  }, [router, intervalMs]);
+  }, [router, intervalMs, startTransition]);
 
-  return null;
+  return isPending ? (
+    <Loader2
+      aria-label="Actualizando"
+      className="size-3.5 animate-spin text-muted-foreground"
+    />
+  ) : null;
 }

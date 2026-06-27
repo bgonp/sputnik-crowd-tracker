@@ -194,7 +194,6 @@ export default async function Home({ params, searchParams }: Props) {
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
-      <AutoRefresh intervalMs={60_000} />
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <Image src="/logo.webp" alt="Sputnik Crowd Tracker" width={40} height={40} priority />
@@ -216,20 +215,23 @@ export default async function Home({ params, searchParams }: Props) {
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Aforo de rocódromos en tiempo real
           </h2>
-          {lastUpdated && (
-            <p
-              className={`flex items-center gap-1.5 text-xs whitespace-nowrap ${
-                lastUpdatedStale
-                  ? "font-medium text-amber-600 dark:text-amber-500"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {lastUpdatedStale && (
-                <AlertTriangle aria-hidden className="size-3.5" />
-              )}
-              {lastUpdatedLabel(formatMadridTime(lastUpdated))}
-            </p>
-          )}
+          <div className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
+            <AutoRefresh intervalMs={60_000} />
+            {lastUpdated && (
+              <p
+                className={`flex items-center gap-1.5 ${
+                  lastUpdatedStale
+                    ? "font-medium text-amber-600 dark:text-amber-500"
+                    : ""
+                }`}
+              >
+                {lastUpdatedStale && (
+                  <AlertTriangle aria-hidden className="size-3.5" />
+                )}
+                {lastUpdatedLabel(formatMadridTime(lastUpdated))}
+              </p>
+            )}
+          </div>
         </div>
         <Suspense>
           <LiveCards
