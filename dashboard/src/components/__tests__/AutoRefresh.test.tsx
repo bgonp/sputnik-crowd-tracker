@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -64,5 +64,13 @@ describe("AutoRefresh", () => {
     render(<AutoRefresh intervalMs={1000} />);
     vi.advanceTimersByTime(5000);
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("renders a refresh button that triggers a refresh on click", () => {
+    render(<AutoRefresh intervalMs={1000} />);
+    const button = screen.getByRole("button", { name: "Actualizar" });
+    expect(button).toBeDefined();
+    fireEvent.click(button);
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
