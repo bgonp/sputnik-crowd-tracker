@@ -19,6 +19,9 @@ f=$(jq -r '.tool_input.file_path // empty')
 # Derive project root from git; if that fails, don't block
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 
+# Already inside a worktree — all writes within it are OK
+[[ "$root" == *"/.claude/worktrees/"* ]] && exit 0
+
 # File is outside the project — not our concern
 [[ "$f" != "$root/"* ]] && exit 0
 
