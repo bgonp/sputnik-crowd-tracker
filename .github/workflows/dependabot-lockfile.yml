@@ -1,0 +1,52 @@
+name: Sync lockfile for Dependabot PRs
+
+# Dependabot bumps package.json but uses an older pnpm version that generates
+# a different lockfile format than the one declared in packageManager (pnpm 11).
+# This workflow detects the drift and commits the corrected lockfile so CI passes.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  sync-lockfile:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Check out the PR head branch so we can push back to it.
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # pnpm version comes from the "packageManager" field in package.json
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Regenerate lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Commit lockfile if out of date
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          if git diff --staged --quiet; then
+            echo "Lockfile already up to date"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: sync pnpm-lock.yaml with Dependabot changes"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push updated lockfile
+        if: steps.commit.outputs.changed == 'true'
+        run: git push
